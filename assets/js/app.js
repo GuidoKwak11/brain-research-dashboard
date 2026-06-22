@@ -7,6 +7,8 @@
   const CONFIG = {
     dataFile: "data/2final_USP_brain_research_dashboard_data.xlsx",
     sheet: "Dashboard data",
+    brainVideo: "assets/media/brain/openart-02178215875840200000000000000000000ffffc0a86ee5a72664_1782158863485_5adcc9ab.mp4",
+    brainPoster: "assets/media/brain/brain-poster.jpg",
   };
 
   // Source column headers (must match the Excel header row).
@@ -35,12 +37,30 @@
     { key: "collab", label: "Collaboration", multi: false },
   ];
 
+  const HOME = "__home__";
   const OVERVIEW = "__overview__";
+
+  // The themes are portfolio categories rather than one-to-one anatomical
+  // regions. These positions make that distinction visible: region-specific
+  // themes sit on the brain, while system-wide themes form call-outs around it.
+  const BRAIN_THEME_MAP = {
+    "Behaviour": { x: 24, y: 30, region: "Frontal & limbic networks" },
+    "Communication impairments": { x: 28, y: 55, region: "Language networks" },
+    "Brain development": { x: 38, y: 18, region: "Developing cortex" },
+    "Brain and neuron structure": { x: 52, y: 20, region: "Cortex & cells" },
+    "Cancer": { x: 69, y: 25, region: "Brain tissue" },
+    "Stroke": { x: 59, y: 40, region: "Vascular networks" },
+    "Drug delivery": { x: 48, y: 48, region: "Central brain" },
+    "Epilepsy": { x: 45, y: 64, region: "Temporal networks" },
+    "Neuroimaging & brain technology": { x: 72, y: 47, region: "Whole-brain view" },
+    "Neuromuscular disorders": { x: 60, y: 76, region: "Brainstem & motor system" },
+    "Ethics, society & care systems": { x: 78, y: 72, region: "People & care" },
+  };
 
   const state = {
     projects: [],
     themes: [],            // [name, count] ordered by count desc
-    activeTab: OVERVIEW,
+    activeTab: HOME,
     filters: { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" },
     charts: [],
     rebuildCharts: null,   // set per theme view so pill removal can refresh charts
@@ -168,7 +188,7 @@
     const hasCollab = p.collab === "With partners";
     const collabBadge = hasCollab
       ? `<span class="badge badge--collab"><span class="badge__dot" style="background:var(--green)"></span>Collaboration</span>`
-      : `<span class="badge badge--solo"><span class="badge__dot" style="background:#b9b9b9"></span>No partners</span>`;
+      : `<span class="badge badge--solo"><span class="badge__dot" style="background:#b9b9b9"></span>No Collaboration</span>`;
     const badges = [
       state.activeTab === OVERVIEW
         ? `<span class="badge"><span class="badge__dot" style="background:${themeColor(p.theme)}"></span>${esc(p.theme)}</span>` : "",
@@ -178,7 +198,7 @@
     const detail = [
       p.institute ? `<div class="card__detail-row"><span class="card__detail-k">Main institute:</span> ${esc(p.institute)}</div>` : "",
       p.department ? `<div class="card__detail-row"><span class="card__detail-k">Involved department:</span> ${esc(p.department)}</div>` : "",
-      hasCollab ? `<div class="card__detail-row card__detail-row--clamp"><span class="card__detail-k">Partners:</span> ${esc(p.collaborators)}</div>` : "",
+      hasCollab ? `<div class="card__detail-row card__detail-row--clamp"><span class="card__detail-k">Collaborating with:</span> ${esc(p.collaborators)}</div>` : "",
     ].join("");
     return `<article class="card">
       <div class="card__badges">${badges}</div>
@@ -208,17 +228,18 @@
       .join("");
     tabs.querySelectorAll(".tab").forEach((btn) =>
       btn.addEventListener("click", () => selectTab(btn.dataset.tab)));
-    // On the home page the tiles are the navigation, so the tab bar is hidden;
-    // theme pages keep the tabs for switching between themes.
-    tabs.hidden = state.activeTab === OVERVIEW;
+    // The animated brain is the primary navigation on the home page.
+    tabs.hidden = state.activeTab === HOME;
   }
 
   function selectTab(tab) {
     state.activeTab = tab;
     state.filters = { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" };
-    const slug = tab === OVERVIEW ? "" : encodeURIComponent(tab);
-    if (decodeURIComponent((location.hash || "").slice(1)) !== tab) {
-      history.replaceState(null, "", slug ? `#${slug}` : location.pathname);
+    const slug = tab === HOME ? "" : tab === OVERVIEW ? "overview" : encodeURIComponent(tab);
+    const current = decodeURIComponent((location.hash || "").slice(1));
+    const expected = tab === HOME ? "" : tab === OVERVIEW ? "overview" : tab;
+    if (current !== expected) {
+      history.pushState(null, "", slug ? `#${slug}` : location.pathname);
     }
     renderTabs();
     render();
@@ -227,8 +248,10 @@
 
   function tabFromHash() {
     const raw = decodeURIComponent((location.hash || "").slice(1));
+    if (!raw) return HOME;
+    if (raw === "overview") return OVERVIEW;
     if (raw && state.themes.some(([name]) => name === raw)) return raw;
-    return OVERVIEW;
+    return HOME;
   }
 
   // --- Render: cards only (filter application) ----------------------------
@@ -276,8 +299,89 @@
   function render() {
     destroyCharts();
     state.rebuildCharts = null;
-    if (state.activeTab === OVERVIEW) renderOverview();
+    if (state.activeTab === HOME) renderHome();
+    else if (state.activeTab === OVERVIEW) renderOverview();
     else renderThemeView();
+  }
+
+  function brainThemeHtml([name, count], index) {
+    const fallback = { x: 18 + (index % 4) * 21, y: 24 + Math.floor(index / 4) * 25, region: "Brain research" };
+    const point = BRAIN_THEME_MAP[name] || fallback;
+    return `<button class="brain-theme" data-theme="${esc(name)}" style="--x:${point.x}%;--y:${point.y}%;--theme-color:${themeColor(name)}">
+      <span class="brain-theme__dot" aria-hidden="true"></span>
+      <span class="brain-theme__copy">
+        <span class="brain-theme__name">${esc(name)}</span>
+        <span class="brain-theme__meta">${esc(point.region)} · ${count} projects</span>
+      </span>
+    </button>`;
+  }
+
+  function renderHome() {
+    view().innerHTML = `
+      <section class="brain-intro">
+        <span class="brain-intro__eyebrow">Utrecht Science Park</span>
+        <h2>Explore the brain research landscape</h2>
+        <p>Discover how researchers across Utrecht investigate the brain—from cells and development to behaviour, technology and care.</p>
+      </section>
+      <section class="brain-map" id="brainMap" aria-label="Interactive map of brain research themes">
+        <div class="brain-map__visual">
+          <video id="brainVideo" class="brain-map__video" muted playsinline preload="metadata" poster="${CONFIG.brainPoster}">
+            <source src="${CONFIG.brainVideo}" type="video/mp4" />
+          </video>
+          <div class="brain-map__shade" aria-hidden="true"></div>
+          <div class="brain-map__prompt"><span>11 research themes</span><strong>Choose a point to explore</strong></div>
+          <button class="brain-map__replay" id="brainReplay" type="button" aria-label="Replay brain animation">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6v5h-5"/><path d="M19 11a8 8 0 1 0 1 5"/></svg>
+            Replay
+          </button>
+        </div>
+        <div class="brain-themes">${state.themes.map(brainThemeHtml).join("")}</div>
+      </section>
+      <div class="brain-note">
+        <p>Portfolio themes are placed near their most relevant brain area; broad themes connect multiple regions and systems.</p>
+        <button class="overview-link" id="overviewLink" type="button">View the complete portfolio overview <span aria-hidden="true">→</span></button>
+      </div>`;
+
+    view().querySelectorAll(".brain-theme").forEach((button) =>
+      button.addEventListener("click", () => selectTab(button.dataset.theme)));
+    $("overviewLink").addEventListener("click", () => selectTab(OVERVIEW));
+    setupBrainAnimation();
+  }
+
+  function setupBrainAnimation() {
+    const map = $("brainMap");
+    const video = $("brainVideo");
+    const replay = $("brainReplay");
+    if (!map || !video || !replay) return;
+    const settleAt = 2.05;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const revealMap = () => map.classList.add("is-mapped");
+    const settle = () => {
+      video.pause();
+      revealMap();
+    };
+    const playIntro = () => {
+      map.classList.remove("is-mapped");
+      video.currentTime = 0;
+      const attempt = video.play();
+      if (attempt) attempt.catch(revealMap);
+    };
+
+    video.addEventListener("timeupdate", () => {
+      if (video.currentTime >= settleAt) settle();
+    });
+    video.addEventListener("error", revealMap);
+    replay.addEventListener("click", playIntro);
+
+    if (reducedMotion) {
+      video.addEventListener("loadedmetadata", () => {
+        video.currentTime = Math.min(settleAt, video.duration || settleAt);
+        revealMap();
+      }, { once: true });
+      revealMap();
+    } else if (video.readyState >= 1) playIntro();
+    else video.addEventListener("loadedmetadata", playIntro, { once: true });
   }
 
   function renderOverview() {
@@ -418,9 +522,24 @@
       state.activeTab = tabFromHash();
       renderTabs();
       render();
+      const homeLink = $("homeLink");
+      if (homeLink) homeLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        selectTab(HOME);
+      });
       window.addEventListener("hashchange", () => {
         const tab = tabFromHash();
         if (tab !== state.activeTab) selectTab(tab);
+      });
+      window.addEventListener("popstate", () => {
+        const tab = tabFromHash();
+        if (tab !== state.activeTab) {
+          state.activeTab = tab;
+          state.filters = { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" };
+          renderTabs();
+          render();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
       });
     } catch (err) {
       console.error(err);
