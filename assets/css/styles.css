@@ -83,6 +83,33 @@ body {
 .masthead__status[data-state="error"] { color: var(--magenta); border-color: var(--magenta); }
 .masthead__status[data-state="ready"] { color: var(--green); border-color: rgba(52, 211, 153, 0.4); }
 
+/* ---------- Theme tabs ---------- */
+.tabs {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 4px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.tab {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.tab:hover { color: var(--ink); }
+.tab.is-active { color: var(--violet); border-bottom-color: var(--violet); }
+
 /* ---------- Layout ---------- */
 .layout {
   max-width: 1180px;
@@ -190,6 +217,44 @@ body {
   margin-bottom: 14px;
 }
 .chart-wrap { position: relative; height: 240px; }
+.chart-wrap--tall { height: 360px; }
+
+/* ---------- Intro / theme header ---------- */
+.intro h2, .theme-head h2 { font-family: var(--font-head); margin: 0 0 6px; }
+.intro p { color: var(--muted); margin: 0; max-width: 70ch; }
+.theme-head__eyebrow {
+  font-family: var(--font-head);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.theme-head h2 { font-size: 1.9rem; letter-spacing: -0.01em; margin-top: 4px; }
+.theme-head p { color: var(--muted); margin: 4px 0 0; }
+
+/* ---------- Theme tiles (overview) ---------- */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.theme-tile {
+  text-align: left;
+  background: linear-gradient(170deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  font-family: var(--font-body);
+}
+.theme-tile:hover { transform: translateY(-3px); border-color: var(--violet); }
+.theme-tile__count { font-family: var(--font-head); font-size: 2rem; font-weight: 700; color: var(--violet); line-height: 1; }
+.theme-tile__name { font-family: var(--font-head); font-weight: 600; color: var(--ink); }
+.theme-tile__go { color: var(--cyan); font-size: 0.78rem; margin-top: 6px; }
 
 /* ---------- Results ---------- */
 .results__head {
