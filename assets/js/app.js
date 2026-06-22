@@ -123,11 +123,15 @@
     return state.projects.filter((p) => p.theme === state.activeTab);
   }
 
-  // Apply the facet + search filters on top of the theme subset.
-  function applyFacets(projects) {
+  // Apply the facet + search filters on top of the theme subset. Passing
+  // `except` skips one facet — used so a chart can show its own full set of
+  // options while still reflecting the filters chosen on the other charts
+  // (cross-filtering).
+  function applyFacets(projects, except) {
     const needle = state.filters.q.trim().toLowerCase();
     return projects.filter((p) => {
       for (const f of FACETS) {
+        if (f.key === except) continue;
         const sel = state.filters[f.key];
         if (sel && !valuesOf(p, f.key, f.multi).includes(sel)) return false;
       }
@@ -171,14 +175,16 @@
       p.stage ? `<span class="badge badge--stage">${esc(p.stage)}</span>` : "",
       collabBadge,
     ].join("");
-    const partners = hasCollab
-      ? `<div class="card__partners"><span class="card__partners-k">Partners:</span> ${esc(p.collaborators)}</div>` : "";
+    const detail = [
+      p.institute ? `<div class="card__detail-row"><span class="card__detail-k">Main institute:</span> ${esc(p.institute)}</div>` : "",
+      p.department ? `<div class="card__detail-row"><span class="card__detail-k">Involved department:</span> ${esc(p.department)}</div>` : "",
+      hasCollab ? `<div class="card__detail-row card__detail-row--clamp"><span class="card__detail-k">Partners:</span> ${esc(p.collaborators)}</div>` : "",
+    ].join("");
     return `<article class="card">
       <div class="card__badges">${badges}</div>
       <h3 class="card__title">${esc(p.title)}</h3>
       <p class="card__desc">${esc(p.description)}</p>
-      <div class="card__meta">${esc(p.institute)}${p.department ? " · " + esc(p.department) : ""}</div>
-      ${partners}
+      <div class="card__detail">${detail}</div>
       <div class="card__tags">${tags}</div>
       ${link}
     </article>`;
@@ -356,15 +362,18 @@
         <p class="empty" id="emptyState" hidden>No projects match the current filters.</p>
       </section>`;
 
-    // Charts show the full theme distribution; the active facet is highlighted
-    // and rebuilt whenever a filter changes (clicking a bar/slice cross-filters).
+    // Cross-filtering: each chart's bars/slices reflect the projects left after
+    // applying every *other* facet (and the search), while keeping its own full
+    // set of options so you can still switch selection. The active facet is
+    // highlighted. Charts are rebuilt whenever any filter changes, so picking a
+    // value on one chart instantly reshapes the others — and the cards.
     function buildCharts() {
       destroyCharts();
-      state.charts.push(DashCharts.makeBar($("cDomain"), countBy(subset, "domain", true), setFacet("domain"),
+      state.charts.push(DashCharts.makeBar($("cDomain"), countBy(applyFacets(subset, "domain"), "domain", true), setFacet("domain"),
         { horizontal: true, topN: 12, active: state.filters.domain }));
-      state.charts.push(DashCharts.makeDoughnut($("cInnovation"), countBy(subset, "innovation", true), setFacet("innovation"),
+      state.charts.push(DashCharts.makeDoughnut($("cInnovation"), countBy(applyFacets(subset, "innovation"), "innovation", true), setFacet("innovation"),
         { active: state.filters.innovation }));
-      state.charts.push(DashCharts.makeBar($("cStage"), countBy(subset, "stage", false), setFacet("stage"),
+      state.charts.push(DashCharts.makeBar($("cStage"), countBy(applyFacets(subset, "stage"), "stage", false), setFacet("stage"),
         { horizontal: true, active: state.filters.stage }));
     }
     const setFacet = (key) => (value) => {
