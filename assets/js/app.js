@@ -154,7 +154,10 @@
     const btns = [{ id: OVERVIEW, label: "Overview" }]
       .concat(state.themes.map(([name]) => ({ id: name, label: name })));
     tabs.innerHTML = btns
-      .map((b) => `<button class="tab${b.id === state.activeTab ? " is-active" : ""}" data-tab="${esc(b.id)}">${esc(b.label)}</button>`)
+      .map((b) => {
+        const active = b.id === state.activeTab;
+        return `<button class="tab${active ? " is-active" : ""}" data-tab="${esc(b.id)}"${active ? ' aria-current="page"' : ""}>${esc(b.label)}</button>`;
+      })
       .join("");
     tabs.querySelectorAll(".tab").forEach((btn) =>
       btn.addEventListener("click", () => selectTab(btn.dataset.tab)));
