@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>USP Brain Research Dashboard</title>
+  <meta name="description" content="Explore brain research projects across the Utrecht Science Park — filter by theme, innovation focus, research stage, domain and institute." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"></div>
+
+  <header class="masthead">
+    <div class="masthead__inner">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="24" cy="24" r="4" />
+            <circle cx="9" cy="14" r="2.6" /><circle cx="40" cy="11" r="2.6" />
+            <circle cx="38" cy="36" r="2.6" /><circle cx="11" cy="37" r="2.6" />
+            <path d="M11.5 15.5 20.5 21M37 13l-9 8M35.5 34 27.5 27M13 35l8-7" />
+          </svg>
+        </span>
+        <div class="brand__text">
+          <h1>USP Brain Research Dashboard</h1>
+          <p>Brain research across the Utrecht Science Park — explore, filter, discover.</p>
+        </div>
+      </div>
+      <div class="masthead__status" id="loadStatus" role="status">Loading data…</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="kpis" id="kpis" aria-label="Key figures"></section>
+
+    <section class="controls" aria-label="Filters">
+      <div class="controls__search">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="searchInput" placeholder="Search title, description or tags…" autocomplete="off" />
+      </div>
+      <div class="controls__facets" id="facets"></div>
+      <button class="btn-clear" id="clearFilters" type="button" hidden>Clear filters</button>
+    </section>
+
+    <section class="charts" aria-label="Overview charts">
+      <figure class="chart-card">
+        <figcaption>Projects per theme</figcaption>
+        <div class="chart-wrap"><canvas id="chartTheme"></canvas></div>
+      </figure>
+      <figure class="chart-card">
+        <figcaption>Innovation theme</figcaption>
+        <div class="chart-wrap"><canvas id="chartInnovation"></canvas></div>
+      </figure>
+      <figure class="chart-card">
+        <figcaption>Research stage</figcaption>
+        <div class="chart-wrap"><canvas id="chartStage"></canvas></div>
+      </figure>
+    </section>
+
+    <section class="results" aria-label="Projects">
+      <div class="results__head">
+        <h2>Projects</h2>
+        <span class="results__count" id="resultCount"></span>
+      </div>
+      <div class="grid" id="projectGrid"></div>
+      <p class="empty" id="emptyState" hidden>No projects match the current filters.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Utrecht Science Park · Brain research portfolio</span>
+    <span id="dataMeta"></span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
