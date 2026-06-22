@@ -7,8 +7,8 @@
   const CONFIG = {
     dataFile: "data/2final_USP_brain_research_dashboard_data.xlsx",
     sheet: "Dashboard data",
-    brainVideo: "assets/media/brain/brain-interactive.webm",
-    brainPoster: "assets/media/brain/brain-poster.png",
+    brainVideo: "brain/openart-02178216296258000000000000000000000ffffc0a86fc0d40593_1782163076164_aef8943f.mp4",
+    brainPoster: "brain/brain-hero-poster.jpg",
   };
 
   // Source column headers (must match the Excel header row).
@@ -39,23 +39,6 @@
 
   const HOME = "__home__";
   const OVERVIEW = "__overview__";
-
-  // The themes are portfolio categories rather than one-to-one anatomical
-  // regions. These positions make that distinction visible: region-specific
-  // themes sit on the brain, while system-wide themes form call-outs around it.
-  const BRAIN_THEME_MAP = {
-    "Behaviour": { x: 24, y: 30, region: "Frontal & limbic networks" },
-    "Communication impairments": { x: 28, y: 55, region: "Language networks" },
-    "Brain development": { x: 38, y: 18, region: "Developing cortex" },
-    "Brain and neuron structure": { x: 52, y: 20, region: "Cortex & cells" },
-    "Cancer": { x: 69, y: 25, region: "Brain tissue" },
-    "Stroke": { x: 59, y: 40, region: "Vascular networks" },
-    "Drug delivery": { x: 48, y: 48, region: "Central brain" },
-    "Epilepsy": { x: 45, y: 64, region: "Temporal networks" },
-    "Neuroimaging & brain technology": { x: 72, y: 47, region: "Whole-brain view" },
-    "Neuromuscular disorders": { x: 60, y: 76, region: "Brainstem & motor system" },
-    "Ethics, society & care systems": { x: 78, y: 72, region: "People & care" },
-  };
 
   const PROJECT_TEAM = {
     name: "Wiring Brain Research Group 2",
@@ -309,36 +292,13 @@
     else renderThemeView();
   }
 
-  function brainThemeHtml([name, count], index) {
-    const fallback = { x: 18 + (index % 4) * 21, y: 24 + Math.floor(index / 4) * 25, region: "Brain research" };
-    const point = BRAIN_THEME_MAP[name] || fallback;
-    return `<button class="brain-theme" data-theme="${esc(name)}" style="--x:${point.x}%;--y:${point.y}%;--theme-color:${themeColor(name)}">
-      <span class="brain-theme__dot" aria-hidden="true"></span>
-      <span class="brain-theme__copy">
-        <span class="brain-theme__name">${esc(name)}</span>
-        <span class="brain-theme__meta">${esc(point.region)} · ${count} projects</span>
-      </span>
-    </button>`;
-  }
-
   function renderHome() {
+    const brainHero = window.BrainHero
+      ? window.BrainHero.render({ assetPath: CONFIG.brainVideo, posterPath: CONFIG.brainPoster })
+      : "";
     view().innerHTML = `
-      <section class="brain-intro">
-        <span class="brain-intro__eyebrow">Utrecht Science Park</span>
-        <h2>Explore the brain research landscape</h2>
-        <p>Discover how researchers across Utrecht investigate the brain—from cells and development to behaviour, technology and care.</p>
-      </section>
-      <section class="brain-map" id="brainMap" aria-label="Interactive map of brain research themes">
-        <div class="brain-map__visual">
-          <video id="brainVideo" class="brain-map__video" muted playsinline autoplay loop preload="auto" poster="${CONFIG.brainPoster}" aria-hidden="true">
-            <source src="${CONFIG.brainVideo}" type="video/webm" />
-          </video>
-          <div class="brain-map__prompt"><span>Interactive brain</span><strong><span class="pointer-instruction">Move your cursor to rotate</span><span class="touch-instruction">Explore the themes below</span></strong></div>
-        </div>
-        <div class="brain-themes">${state.themes.map(brainThemeHtml).join("")}</div>
-      </section>
+      ${brainHero}
       <div class="brain-note">
-        <p>Portfolio themes are placed near their most relevant brain area; broad themes connect multiple regions and systems.</p>
         <button class="overview-link" id="overviewLink" type="button">View the complete portfolio overview <span aria-hidden="true">→</span></button>
       </div>
       <section class="project-team" aria-labelledby="projectTeamTitle">
@@ -352,62 +312,13 @@
         </ul>
       </section>`;
 
-    view().querySelectorAll(".brain-theme").forEach((button) =>
-      button.addEventListener("click", () => selectTab(button.dataset.theme)));
     $("overviewLink").addEventListener("click", () => selectTab(OVERVIEW));
-    setupBrainAnimation();
-  }
-
-  function setupBrainAnimation() {
-    const map = $("brainMap");
-    const video = $("brainVideo");
-    const visual = map && map.querySelector(".brain-map__visual");
-    if (!map || !video || !visual) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    let resumeTimer = 0;
-
-    const resume = () => {
-      if (reducedMotion) return;
-      const attempt = video.play();
-      if (attempt) attempt.catch(() => {});
-    };
-    const resetParallax = () => {
-      visual.style.setProperty("--brain-x", "0px");
-      visual.style.setProperty("--brain-y", "0px");
-    };
-
-    if (reducedMotion) {
-      video.addEventListener("loadedmetadata", () => {
-        video.pause();
-        video.currentTime = Math.min(2.05, video.duration || 2.05);
-      }, { once: true });
-      video.pause();
-      return;
+    if (window.BrainHero) {
+      window.BrainHero.mount({
+        root: $("brainHero"),
+        onThemeSelect(theme) { selectTab(theme.label); },
+      });
     }
-
-    if (!finePointer) return;
-    map.addEventListener("pointermove", (event) => {
-      const rect = visual.getBoundingClientRect();
-      const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-      const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
-      const duration = Number.isFinite(video.duration) ? video.duration : 5.04;
-
-      video.pause();
-      video.currentTime = x * Math.max(0, duration - 0.04);
-      visual.style.setProperty("--brain-x", `${(x - 0.5) * 24}px`);
-      visual.style.setProperty("--brain-y", `${(y - 0.5) * 14}px`);
-      map.classList.add("is-interacting");
-
-      window.clearTimeout(resumeTimer);
-      resumeTimer = window.setTimeout(resume, 650);
-    });
-    map.addEventListener("pointerleave", () => {
-      map.classList.remove("is-interacting");
-      resetParallax();
-      window.clearTimeout(resumeTimer);
-      resume();
-    });
   }
 
   function renderOverview() {
