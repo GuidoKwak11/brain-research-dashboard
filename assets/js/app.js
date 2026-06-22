@@ -109,7 +109,7 @@
           institute: cell(r, "institute"),
           department: cell(r, "department"),
           collaborators: hasCollab ? collabRaw : "",
-          collab: hasCollab ? "With partners" : "No partners",
+          collab: hasCollab ? "Collaboration" : "No Collaboration",
           website: cell(r, "website"),
           innovation: cell(r, "innovation"),
           domain: cell(r, "domain"),
@@ -185,7 +185,7 @@
     const tags = p.tags.slice(0, 5).map((t) => `<span class="tag">${esc(t)}</span>`).join("");
     const link = p.website
       ? `<a class="card__link" href="${esc(p.website)}" target="_blank" rel="noopener">Visit project →</a>` : "";
-    const hasCollab = p.collab === "With partners";
+    const hasCollab = p.collab === "Collaboration";
     const collabBadge = hasCollab
       ? `<span class="badge badge--collab"><span class="badge__dot" style="background:var(--green)"></span>Collaboration</span>`
       : `<span class="badge badge--solo"><span class="badge__dot" style="background:#b9b9b9"></span>No Collaboration</span>`;
@@ -328,7 +328,7 @@
           <video id="brainVideo" class="brain-map__video" muted playsinline autoplay loop preload="auto" poster="${CONFIG.brainPoster}" aria-hidden="true">
             <source src="${CONFIG.brainVideo}" type="video/webm" />
           </video>
-          <div class="brain-map__prompt"><span>Interactive brain</span><strong>Move your cursor to rotate</strong></div>
+          <div class="brain-map__prompt"><span>Interactive brain</span><strong><span class="pointer-instruction">Move your cursor to rotate</span><span class="touch-instruction">Explore the themes below</span></strong></div>
         </div>
         <div class="brain-themes">${state.themes.map(brainThemeHtml).join("")}</div>
       </section>
@@ -402,7 +402,7 @@
       { value: state.themes.length, label: "Dashboard themes" },
       { value: new Set(p.flatMap((x) => splitMulti(x.domain))).size, label: "Research domains" },
       { value: new Set(p.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
-      { value: p.filter((x) => x.collab === "With partners").length, label: "Collaborations" },
+      { value: p.filter((x) => x.collab === "Collaboration").length, label: "Collaborations" },
     ];
     view().innerHTML = `
       <section class="intro">
@@ -441,7 +441,7 @@
       { value: new Set(subset.flatMap((x) => splitMulti(x.domain))).size, label: "Research domains" },
       { value: new Set(subset.map((x) => x.stage).filter(Boolean)).size, label: "Research stages" },
       { value: new Set(subset.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
-      { value: subset.filter((x) => x.collab === "With partners").length, label: "Collaborations" },
+      { value: subset.filter((x) => x.collab === "Collaboration").length, label: "Collaborations" },
     ];
     const facetControls = FACETS.map((f) => {
       const opts = countBy(subset, f.key, f.multi);
