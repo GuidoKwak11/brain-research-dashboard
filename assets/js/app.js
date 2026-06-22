@@ -334,8 +334,19 @@
       });
     } catch (err) {
       console.error(err);
-      status.textContent = "Failed to load data — see console";
+      status.textContent = "Failed to load data";
       status.dataset.state = "error";
+      const isFile = location.protocol === "file:";
+      view().innerHTML = `<section class="loaderr">
+        <h2>Could not load the data file</h2>
+        ${isFile
+          ? `<p>You opened this page directly from disk (<code>file://</code>). Browsers block reading the Excel file that way, so no themes can be shown.</p>
+             <p>Run a tiny local server from the project folder and open it over <code>http://</code>:</p>
+             <pre>python3 -m http.server 8000</pre>
+             <p>Then visit <a href="http://localhost:8000">http://localhost:8000</a>.</p>`
+          : `<p>${esc(String(err.message || err))}</p>
+             <p>Check that <code>${esc(CONFIG.dataFile)}</code> exists and the sheet is named <code>${esc(CONFIG.sheet)}</code>.</p>`}
+      </section>`;
     }
   }
 
