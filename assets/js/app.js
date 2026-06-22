@@ -15,6 +15,7 @@
     theme: "Dashboard theme (hoofdpagina's in het dashboard)",
     institute: "Main institute",
     department: "Involved internal department / research group",
+    collaborators: "Collaborating departments / partners",
     website: "Website",
     innovation: "Utrecht Brain innovation theme",
     domain: "Research domain",
@@ -31,6 +32,7 @@
     { key: "stage", label: "Research stage", multi: false },
     { key: "domain", label: "Research domain", multi: true },
     { key: "institute", label: "Institute", multi: false },
+    { key: "collab", label: "Collaboration", multi: false },
   ];
 
   const OVERVIEW = "__overview__";
@@ -39,7 +41,7 @@
     projects: [],
     themes: [],            // [name, count] ordered by count desc
     activeTab: OVERVIEW,
-    filters: { innovation: "", stage: "", domain: "", institute: "", q: "" },
+    filters: { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" },
     charts: [],
     rebuildCharts: null,   // set per theme view so pill removal can refresh charts
   };
@@ -78,20 +80,26 @@
     const cell = (r, k) => (idx[k] >= 0 ? String(r[idx[k]] == null ? "" : r[idx[k]]).trim() : "");
 
     return rows.slice(1)
-      .map((r) => ({
-        title: cell(r, "title"),
-        theme: cell(r, "theme"),
-        institute: cell(r, "institute"),
-        department: cell(r, "department"),
-        website: cell(r, "website"),
-        innovation: cell(r, "innovation"),
-        domain: cell(r, "domain"),
-        disease: cell(r, "disease"),
-        methods: cell(r, "methods"),
-        stage: cell(r, "stage"),
-        description: cell(r, "description"),
-        tags: splitMulti(cell(r, "tags")),
-      }))
+      .map((r) => {
+        const collabRaw = cell(r, "collaborators");
+        const hasCollab = collabRaw !== "" && !/^(no|none|n\/a|-|geen)$/i.test(collabRaw);
+        return {
+          title: cell(r, "title"),
+          theme: cell(r, "theme"),
+          institute: cell(r, "institute"),
+          department: cell(r, "department"),
+          collaborators: hasCollab ? collabRaw : "",
+          collab: hasCollab ? "With partners" : "No partners",
+          website: cell(r, "website"),
+          innovation: cell(r, "innovation"),
+          domain: cell(r, "domain"),
+          disease: cell(r, "disease"),
+          methods: cell(r, "methods"),
+          stage: cell(r, "stage"),
+          description: cell(r, "description"),
+          tags: splitMulti(cell(r, "tags")),
+        };
+      })
       .filter((p) => p.title);
   }
 
@@ -153,16 +161,24 @@
     const tags = p.tags.slice(0, 5).map((t) => `<span class="tag">${esc(t)}</span>`).join("");
     const link = p.website
       ? `<a class="card__link" href="${esc(p.website)}" target="_blank" rel="noopener">Visit project →</a>` : "";
+    const hasCollab = p.collab === "With partners";
+    const collabBadge = hasCollab
+      ? `<span class="badge badge--collab"><span class="badge__dot" style="background:var(--green)"></span>Collaboration</span>`
+      : `<span class="badge badge--solo"><span class="badge__dot" style="background:#b9b9b9"></span>No partners</span>`;
     const badges = [
       state.activeTab === OVERVIEW
         ? `<span class="badge"><span class="badge__dot" style="background:${themeColor(p.theme)}"></span>${esc(p.theme)}</span>` : "",
       p.stage ? `<span class="badge badge--stage">${esc(p.stage)}</span>` : "",
+      collabBadge,
     ].join("");
+    const partners = hasCollab
+      ? `<div class="card__partners"><span class="card__partners-k">Partners:</span> ${esc(p.collaborators)}</div>` : "";
     return `<article class="card">
       <div class="card__badges">${badges}</div>
       <h3 class="card__title">${esc(p.title)}</h3>
       <p class="card__desc">${esc(p.description)}</p>
       <div class="card__meta">${esc(p.institute)}${p.department ? " · " + esc(p.department) : ""}</div>
+      ${partners}
       <div class="card__tags">${tags}</div>
       ${link}
     </article>`;
@@ -193,7 +209,7 @@
 
   function selectTab(tab) {
     state.activeTab = tab;
-    state.filters = { innovation: "", stage: "", domain: "", institute: "", q: "" };
+    state.filters = { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" };
     const slug = tab === OVERVIEW ? "" : encodeURIComponent(tab);
     if (decodeURIComponent((location.hash || "").slice(1)) !== tab) {
       history.replaceState(null, "", slug ? `#${slug}` : location.pathname);
@@ -241,7 +257,7 @@
   }
 
   function removeFilter(key) {
-    if (key === "__all__") state.filters = { innovation: "", stage: "", domain: "", institute: "", q: "" };
+    if (key === "__all__") state.filters = { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" };
     else state.filters[key] = "";
     const si = $("searchInput");
     if (si) si.value = state.filters.q;
@@ -265,6 +281,7 @@
       { value: state.themes.length, label: "Dashboard themes" },
       { value: new Set(p.flatMap((x) => splitMulti(x.domain))).size, label: "Research domains" },
       { value: new Set(p.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
+      { value: p.filter((x) => x.collab === "With partners").length, label: "With partners" },
     ];
     view().innerHTML = `
       <section class="intro">
@@ -303,6 +320,7 @@
       { value: new Set(subset.flatMap((x) => splitMulti(x.domain))).size, label: "Research domains" },
       { value: new Set(subset.map((x) => x.stage).filter(Boolean)).size, label: "Research stages" },
       { value: new Set(subset.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
+      { value: subset.filter((x) => x.collab === "With partners").length, label: "With partners" },
     ];
     const facetControls = FACETS.map((f) => {
       const opts = countBy(subset, f.key, f.multi);
