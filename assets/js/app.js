@@ -41,6 +41,7 @@
     activeTab: OVERVIEW,
     filters: { innovation: "", stage: "", domain: "", institute: "", q: "" },
     charts: [],
+    rebuildCharts: null,   // set per theme view so pill removal can refresh charts
   };
 
   const $ = (id) => document.getElementById(id);
@@ -52,28 +53,44 @@
     return String(value).split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
   }
 
+  // Resolve each logical field to a column index by header text, tolerant to
+  // whitespace/case. The dashboard-theme header has been blanked before, so it
+  // falls back to the column right after the title when its header is missing.
+  function resolveColumns(header) {
+    const norm = (s) => String(s == null ? "" : s).trim().toLowerCase();
+    const idx = {};
+    for (const key in COL) idx[key] = header.findIndex((h) => norm(h) === norm(COL[key]));
+    if (idx.theme < 0 && idx.title >= 0) {
+      idx.theme = idx.title + 1;
+      console.warn("Theme column header not found — using the column after the title (col " + (idx.theme + 1) + ").");
+    }
+    return idx;
+  }
+
   async function loadData() {
     const res = await fetch(CONFIG.dataFile);
     if (!res.ok) throw new Error(`Could not load ${CONFIG.dataFile} (${res.status})`);
     const wb = XLSX.read(await res.arrayBuffer(), { type: "array" });
     const ws = wb.Sheets[CONFIG.sheet] || wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
-    const get = (r, k) => String(r[COL[k]] || "").trim();
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", blankrows: false });
+    if (!rows.length) return [];
+    const idx = resolveColumns(rows[0]);
+    const cell = (r, k) => (idx[k] >= 0 ? String(r[idx[k]] == null ? "" : r[idx[k]]).trim() : "");
 
-    return rows
+    return rows.slice(1)
       .map((r) => ({
-        title: get(r, "title"),
-        theme: get(r, "theme"),
-        institute: get(r, "institute"),
-        department: get(r, "department"),
-        website: get(r, "website"),
-        innovation: get(r, "innovation"),
-        domain: get(r, "domain"),
-        disease: get(r, "disease"),
-        methods: get(r, "methods"),
-        stage: get(r, "stage"),
-        description: get(r, "description"),
-        tags: splitMulti(get(r, "tags")),
+        title: cell(r, "title"),
+        theme: cell(r, "theme"),
+        institute: cell(r, "institute"),
+        department: cell(r, "department"),
+        website: cell(r, "website"),
+        innovation: cell(r, "innovation"),
+        domain: cell(r, "domain"),
+        disease: cell(r, "disease"),
+        methods: cell(r, "methods"),
+        stage: cell(r, "stage"),
+        description: cell(r, "description"),
+        tags: splitMulti(cell(r, "tags")),
       }))
       .filter((p) => p.title);
   }
@@ -198,13 +215,42 @@
     if (empty) empty.hidden = list.length > 0;
     const count = $("resultCount");
     if (count) count.textContent = `${list.length} of ${themeProjects().length} projects`;
-    const clear = $("clearFilters");
-    if (clear) clear.hidden = !FACETS.some((f) => state.filters[f.key]) && !state.filters.q;
+    renderActivePills();
+  }
+
+  // Removable chips for every active filter — the clear way to deselect.
+  function renderActivePills() {
+    const bar = $("activeFilters");
+    if (!bar) return;
+    const pills = FACETS.filter((f) => state.filters[f.key])
+      .map((f) => ({ key: f.key, label: f.label, value: state.filters[f.key] }));
+    if (state.filters.q) pills.push({ key: "q", label: "Search", value: state.filters.q });
+    if (!pills.length) { bar.hidden = true; bar.innerHTML = ""; return; }
+    bar.hidden = false;
+    bar.innerHTML =
+      `<span class="active-filters__label">Active filters</span>` +
+      pills.map((p) => `<button class="pill" data-key="${esc(p.key)}" aria-label="Remove filter ${esc(p.label)}: ${esc(p.value)}">
+        <span class="pill__k">${esc(p.label)}:</span> ${esc(p.value)} <span class="pill__x" aria-hidden="true">×</span>
+      </button>`).join("") +
+      `<button class="pill pill--clear" data-key="__all__">Clear all</button>`;
+    bar.querySelectorAll(".pill").forEach((btn) =>
+      btn.addEventListener("click", () => removeFilter(btn.dataset.key)));
+  }
+
+  function removeFilter(key) {
+    if (key === "__all__") state.filters = { innovation: "", stage: "", domain: "", institute: "", q: "" };
+    else state.filters[key] = "";
+    const si = $("searchInput");
+    if (si) si.value = state.filters.q;
+    syncFacetControls();
+    if (state.rebuildCharts) state.rebuildCharts();
+    applyFilters();
   }
 
   // --- Render: full view --------------------------------------------------
   function render() {
     destroyCharts();
+    state.rebuildCharts = null;
     if (state.activeTab === OVERVIEW) renderOverview();
     else renderThemeView();
   }
@@ -284,9 +330,9 @@
           <input type="search" id="searchInput" placeholder="Search within this theme…" autocomplete="off" />
         </div>
         <div class="controls__facets">${facetControls}</div>
-        <button class="btn-clear" id="clearFilters" type="button" hidden>Clear filters</button>
       </section>
       <section class="results">
+        <div class="active-filters" id="activeFilters" hidden></div>
         <div class="results__head"><h2>Projects</h2><span class="results__count" id="resultCount"></span></div>
         <div class="grid" id="projectGrid"></div>
         <p class="empty" id="emptyState" hidden>No projects match the current filters.</p>
@@ -310,6 +356,7 @@
       applyFilters();
     };
     buildCharts();
+    state.rebuildCharts = buildCharts; // lets removeFilter() refresh chart highlights
 
     // Wire controls once; a facet change rebuilds charts + cards, search only cards.
     view().querySelectorAll(".facet").forEach((sel) =>
@@ -320,13 +367,6 @@
       }));
     $("searchInput").addEventListener("input", (e) => {
       state.filters.q = e.target.value;
-      applyFilters();
-    });
-    $("clearFilters").addEventListener("click", () => {
-      state.filters = { innovation: "", stage: "", domain: "", institute: "", q: "" };
-      $("searchInput").value = "";
-      syncFacetControls();
-      buildCharts();
       applyFilters();
     });
 

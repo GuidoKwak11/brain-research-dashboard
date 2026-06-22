@@ -312,6 +312,48 @@ body {
 }
 .btn-clear:hover { background: var(--red); color: var(--white); }
 
+/* ---------- Active filter chips ---------- */
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.active-filters__label {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-right: 2px;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--creme);
+  border: 1px solid #f0d98a;
+  color: var(--black);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.pill__k { color: var(--muted); font-weight: 700; }
+.pill__x { font-size: 1.1rem; line-height: 1; color: var(--muted); }
+.pill:hover { border-color: var(--red); color: var(--red); }
+.pill:hover .pill__k, .pill:hover .pill__x { color: var(--red); }
+.pill:focus-visible { outline: 2px solid var(--black); outline-offset: 2px; }
+.pill--clear {
+  background: var(--white);
+  border: 1.5px solid var(--red);
+  color: var(--red);
+  font-weight: 700;
+}
+.pill--clear:hover { background: var(--red); color: var(--white); }
+
 /* ---------- Results / cards ---------- */
 .results__head {
   display: flex;
