@@ -31,7 +31,8 @@
     return labels.map((l, i) => (l === active ? base[i] : base[i] + "33"));
   }
 
-  // Split a long label into up to 3 wrapped lines for the category axis.
+  // Split long category labels across as many lines as needed. Keeping every
+  // line avoids hiding information behind an ellipsis.
   // Breaks on spaces and after slashes, and hard-breaks any over-long token.
   function wrapLabel(str, max) {
     const tokens = String(str).replace(/\//g, "/ ").split(/\s+/).filter(Boolean);
@@ -47,7 +48,6 @@
       else cur = (cur + " " + t).trim();
     }
     if (cur) lines.push(cur);
-    if (lines.length > 3) { lines.length = 3; lines[2] += "…"; }
     return lines;
   }
 
