@@ -57,6 +57,11 @@
     "Ethics, society & care systems": { x: 78, y: 72, region: "People & care" },
   };
 
+  const PROJECT_TEAM = {
+    name: "Wiring Brain Research Group 2",
+    members: ["Emma Durac", "Fiene Agterberg", "Femke Janssen", "Brandon Teerlink", "Myrthe Wiegers"],
+  };
+
   const state = {
     projects: [],
     themes: [],            // [name, count] ordered by count desc
@@ -335,7 +340,17 @@
       <div class="brain-note">
         <p>Portfolio themes are placed near their most relevant brain area; broad themes connect multiple regions and systems.</p>
         <button class="overview-link" id="overviewLink" type="button">View the complete portfolio overview <span aria-hidden="true">→</span></button>
-      </div>`;
+      </div>
+      <section class="project-team" aria-labelledby="projectTeamTitle">
+        <div class="project-team__intro">
+          <span class="project-team__eyebrow">Behind the dashboard</span>
+          <h2 id="projectTeamTitle">${esc(PROJECT_TEAM.name)}</h2>
+          <p>This research dashboard was developed by:</p>
+        </div>
+        <ul class="project-team__members" aria-label="Project members">
+          ${PROJECT_TEAM.members.map((name) => `<li>${esc(name)}</li>`).join("")}
+        </ul>
+      </section>`;
 
     view().querySelectorAll(".brain-theme").forEach((button) =>
       button.addEventListener("click", () => selectTab(button.dataset.theme)));
