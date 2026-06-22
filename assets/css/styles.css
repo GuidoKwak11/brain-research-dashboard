@@ -207,6 +207,21 @@ body {
   font-weight: 700;
   margin-bottom: 14px;
   color: var(--black);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.chart-hint {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  color: #6e5a12;
+  background: var(--creme);
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
 }
 .chart-wrap { position: relative; height: 240px; }
 .chart-wrap--tall { height: 360px; }

@@ -224,9 +224,9 @@
         <p>Pick a theme tab above to dive into its projects, or use the charts below for the big picture. Each theme page has its own filters and dashboards.</p>
       </section>
       <section class="charts">
-        <figure class="chart-card chart-card--wide"><figcaption>Projects per theme</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cTheme"></canvas></div></figure>
-        <figure class="chart-card"><figcaption>Innovation theme</figcaption><div class="chart-wrap"><canvas id="cInnovation"></canvas></div></figure>
-        <figure class="chart-card"><figcaption>Research stage</figcaption><div class="chart-wrap"><canvas id="cStage"></canvas></div></figure>
+        <figure class="chart-card chart-card--wide"><figcaption>Projects per theme <span class="chart-hint">Click to open</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cTheme"></canvas></div></figure>
+        <figure class="chart-card"><figcaption>Innovation theme</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cInnovation"></canvas></div></figure>
+        <figure class="chart-card"><figcaption>Research stage</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cStage"></canvas></div></figure>
       </section>
       <section class="results">
         <div class="results__head"><h2>Themes</h2><span class="results__count">${state.themes.length} themes</span></div>
@@ -235,7 +235,7 @@
 
     state.charts.push(DashCharts.makeBar($("cTheme"), state.themes, (name) => selectTab(name), { horizontal: true }));
     state.charts.push(DashCharts.makeDoughnut($("cInnovation"), countBy(p, "innovation", true), null));
-    state.charts.push(DashCharts.makeBar($("cStage"), countBy(p, "stage", false), null));
+    state.charts.push(DashCharts.makeBar($("cStage"), countBy(p, "stage", false), null, { horizontal: true }));
 
     view().querySelectorAll(".theme-tile").forEach((t) =>
       t.addEventListener("click", () => selectTab(t.dataset.theme)));
@@ -274,9 +274,9 @@
       </section>
       ${kpiHtml(kpis)}
       <section class="charts">
-        <figure class="chart-card"><figcaption>Innovation theme</figcaption><div class="chart-wrap"><canvas id="cInnovation"></canvas></div></figure>
-        <figure class="chart-card"><figcaption>Research stage</figcaption><div class="chart-wrap"><canvas id="cStage"></canvas></div></figure>
-        <figure class="chart-card"><figcaption>Research domain</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cDomain"></canvas></div></figure>
+        <figure class="chart-card chart-card--wide"><figcaption>Research domain <span class="chart-hint">Click to filter</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cDomain"></canvas></div></figure>
+        <figure class="chart-card"><figcaption>Innovation theme <span class="chart-hint">Click to filter</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cInnovation"></canvas></div></figure>
+        <figure class="chart-card"><figcaption>Research stage <span class="chart-hint">Click to filter</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cStage"></canvas></div></figure>
       </section>
       <section class="controls">
         <div class="controls__search">
@@ -292,20 +292,30 @@
         <p class="empty" id="emptyState" hidden>No projects match the current filters.</p>
       </section>`;
 
-    // Charts reflect the full theme subset; clicking sets the matching facet.
+    // Charts show the full theme distribution; the active facet is highlighted
+    // and rebuilt whenever a filter changes (clicking a bar/slice cross-filters).
+    function buildCharts() {
+      destroyCharts();
+      state.charts.push(DashCharts.makeBar($("cDomain"), countBy(subset, "domain", true), setFacet("domain"),
+        { horizontal: true, topN: 12, active: state.filters.domain }));
+      state.charts.push(DashCharts.makeDoughnut($("cInnovation"), countBy(subset, "innovation", true), setFacet("innovation"),
+        { active: state.filters.innovation }));
+      state.charts.push(DashCharts.makeBar($("cStage"), countBy(subset, "stage", false), setFacet("stage"),
+        { horizontal: true, active: state.filters.stage }));
+    }
     const setFacet = (key) => (value) => {
       state.filters[key] = state.filters[key] === value ? "" : value;
       syncFacetControls();
+      buildCharts();
       applyFilters();
     };
-    state.charts.push(DashCharts.makeDoughnut($("cInnovation"), countBy(subset, "innovation", true), setFacet("innovation")));
-    state.charts.push(DashCharts.makeBar($("cStage"), countBy(subset, "stage", false), setFacet("stage")));
-    state.charts.push(DashCharts.makeBar($("cDomain"), countBy(subset, "domain", true), setFacet("domain"), { horizontal: true }));
+    buildCharts();
 
-    // Wire controls once; filter application only re-renders cards.
+    // Wire controls once; a facet change rebuilds charts + cards, search only cards.
     view().querySelectorAll(".facet").forEach((sel) =>
       sel.addEventListener("change", () => {
         state.filters[sel.dataset.key] = sel.value;
+        buildCharts();
         applyFilters();
       }));
     $("searchInput").addEventListener("input", (e) => {
@@ -316,6 +326,7 @@
       state.filters = { innovation: "", stage: "", domain: "", institute: "", q: "" };
       $("searchInput").value = "";
       syncFacetControls();
+      buildCharts();
       applyFilters();
     });
 
