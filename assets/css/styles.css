@@ -89,9 +89,8 @@ body {
   margin: 0 auto;
   padding: 0 24px 4px;
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  flex-wrap: wrap;
+  gap: 6px 4px;
 }
 .tab {
   flex: 0 0 auto;
