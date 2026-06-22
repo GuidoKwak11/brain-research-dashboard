@@ -106,6 +106,7 @@ body {
   gap: 10px;
   border-bottom: 1px solid var(--line);
 }
+.tabs[hidden] { display: none; }
 .tab {
   flex: 0 0 auto;
   background: var(--white);

@@ -186,6 +186,9 @@
       .join("");
     tabs.querySelectorAll(".tab").forEach((btn) =>
       btn.addEventListener("click", () => selectTab(btn.dataset.tab)));
+    // On the home page the tiles are the navigation, so the tab bar is hidden;
+    // theme pages keep the tabs for switching between themes.
+    tabs.hidden = state.activeTab === OVERVIEW;
   }
 
   function selectTab(tab) {
@@ -264,19 +267,16 @@
       { value: new Set(p.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
     ];
     view().innerHTML = `
-      ${kpiHtml(kpis)}
       <section class="intro">
         <h2>Explore by theme</h2>
-        <p>Pick a theme tab above to dive into its projects, or use the charts below for the big picture. Each theme page has its own filters and dashboards.</p>
+        <p>Select a theme to open its dashboard, or scan the big-picture charts below. Each theme page has its own filters and charts.</p>
       </section>
+      <div class="theme-grid">${state.themes.map(themeTileHtml).join("")}</div>
+      ${kpiHtml(kpis)}
       <section class="charts">
         <figure class="chart-card chart-card--wide"><figcaption>Projects per theme <span class="chart-hint">Click to open</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cTheme"></canvas></div></figure>
         <figure class="chart-card"><figcaption>Innovation theme</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cInnovation"></canvas></div></figure>
         <figure class="chart-card"><figcaption>Research stage</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cStage"></canvas></div></figure>
-      </section>
-      <section class="results">
-        <div class="results__head"><h2>Themes</h2><span class="results__count">${state.themes.length} themes</span></div>
-        <div class="theme-grid">${state.themes.map(themeTileHtml).join("")}</div>
       </section>`;
 
     state.charts.push(DashCharts.makeBar($("cTheme"), state.themes, (name) => selectTab(name), { horizontal: true }));
