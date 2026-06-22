@@ -1,15 +1,22 @@
 /* Chart factory — themed Chart.js helpers for the dashboard.
    Charts are clickable: clicking a segment fires onPick(label). */
 (function (global) {
+  // Utrecht University secondary palette (yellow is reserved for identity,
+  // it is too light to read on a white chart background).
   const PALETTE = [
-    "#7c5cff", "#22d3ee", "#f472b6", "#fbbf24", "#34d399",
-    "#60a5fa", "#a78bfa", "#fb7185", "#2dd4bf", "#facc15",
-    "#f87171", "#818cf8",
+    "#24A793", // green
+    "#5287C6", // blue
+    "#5B2182", // purple
+    "#F3965E", // orange
+    "#C00A35", // red
+    "#AA1555", // bordeaux
+    "#001240", // dark blue
+    "#6E3B23", // brown
   ];
-  const GRID = "rgba(138,144,173,0.15)";
-  const TICK = "#8b91ad";
+  const GRID = "rgba(0,0,0,0.08)";
+  const TICK = "#444444";
 
-  Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+  Chart.defaults.font.family = "'Open Sans', system-ui, sans-serif";
   Chart.defaults.color = TICK;
 
   function pickColors(n) {
@@ -65,7 +72,7 @@
         datasets: [{
           data,
           backgroundColor: pickColors(labels.length),
-          borderColor: "#141829",
+          borderColor: "#ffffff",
           borderWidth: 2,
         }],
       },

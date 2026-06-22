@@ -119,6 +119,13 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  // Stable UU-palette colour per theme (consistent across tiles + badges).
+  function themeColor(name) {
+    const palette = (window.DashCharts && DashCharts.PALETTE) || ["#000000"];
+    const i = state.themes.findIndex(([t]) => t === name);
+    return palette[(i < 0 ? 0 : i) % palette.length];
+  }
+
   function kpiHtml(items) {
     return `<section class="kpis">${items
       .map((k) => `<div class="kpi"><div class="kpi__value">${k.value}</div><div class="kpi__label">${esc(k.label)}</div></div>`)
@@ -130,8 +137,9 @@
     const link = p.website
       ? `<a class="card__link" href="${esc(p.website)}" target="_blank" rel="noopener">Visit project →</a>` : "";
     const badges = [
-      state.activeTab === OVERVIEW ? `<span class="badge" style="color:var(--violet)">${esc(p.theme)}</span>` : "",
-      p.stage ? `<span class="badge" style="color:var(--cyan)">${esc(p.stage)}</span>` : "",
+      state.activeTab === OVERVIEW
+        ? `<span class="badge"><span class="badge__dot" style="background:${themeColor(p.theme)}"></span>${esc(p.theme)}</span>` : "",
+      p.stage ? `<span class="badge badge--stage">${esc(p.stage)}</span>` : "",
     ].join("");
     return `<article class="card">
       <div class="card__badges">${badges}</div>
@@ -234,7 +242,8 @@
   }
 
   function themeTileHtml([name, count]) {
-    return `<button class="theme-tile" data-theme="${esc(name)}">
+    const color = themeColor(name);
+    return `<button class="theme-tile" data-theme="${esc(name)}" style="border-top-color:${color}">
       <span class="theme-tile__count">${count}</span>
       <span class="theme-tile__name">${esc(name)}</span>
       <span class="theme-tile__go">Open dashboard →</span>
