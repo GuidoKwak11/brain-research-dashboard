@@ -7,8 +7,8 @@
   const CONFIG = {
     dataFile: "data/2final_USP_brain_research_dashboard_data.xlsx",
     sheet: "Dashboard data",
-    brainVideo: "assets/media/brain/openart-02178215875840200000000000000000000ffffc0a86ee5a72664_1782158863485_5adcc9ab.mp4",
-    brainPoster: "assets/media/brain/brain-poster.jpg",
+    brainVideo: "assets/media/brain/brain-interactive.webm",
+    brainPoster: "assets/media/brain/brain-poster.png",
   };
 
   // Source column headers (must match the Excel header row).
@@ -325,15 +325,10 @@
       </section>
       <section class="brain-map" id="brainMap" aria-label="Interactive map of brain research themes">
         <div class="brain-map__visual">
-          <video id="brainVideo" class="brain-map__video" muted playsinline preload="metadata" poster="${CONFIG.brainPoster}">
-            <source src="${CONFIG.brainVideo}" type="video/mp4" />
+          <video id="brainVideo" class="brain-map__video" muted playsinline autoplay loop preload="auto" poster="${CONFIG.brainPoster}" aria-hidden="true">
+            <source src="${CONFIG.brainVideo}" type="video/webm" />
           </video>
-          <div class="brain-map__shade" aria-hidden="true"></div>
-          <div class="brain-map__prompt"><span>11 research themes</span><strong>Choose a point to explore</strong></div>
-          <button class="brain-map__replay" id="brainReplay" type="button" aria-label="Replay brain animation">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6v5h-5"/><path d="M19 11a8 8 0 1 0 1 5"/></svg>
-            Replay
-          </button>
+          <div class="brain-map__prompt"><span>Interactive brain</span><strong>Move your cursor to rotate</strong></div>
         </div>
         <div class="brain-themes">${state.themes.map(brainThemeHtml).join("")}</div>
       </section>
@@ -351,37 +346,53 @@
   function setupBrainAnimation() {
     const map = $("brainMap");
     const video = $("brainVideo");
-    const replay = $("brainReplay");
-    if (!map || !video || !replay) return;
-    const settleAt = 2.05;
+    const visual = map && map.querySelector(".brain-map__visual");
+    if (!map || !video || !visual) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    let resumeTimer = 0;
 
-    const revealMap = () => map.classList.add("is-mapped");
-    const settle = () => {
-      video.pause();
-      revealMap();
-    };
-    const playIntro = () => {
-      map.classList.remove("is-mapped");
-      video.currentTime = 0;
+    const resume = () => {
+      if (reducedMotion) return;
       const attempt = video.play();
-      if (attempt) attempt.catch(revealMap);
+      if (attempt) attempt.catch(() => {});
     };
-
-    video.addEventListener("timeupdate", () => {
-      if (video.currentTime >= settleAt) settle();
-    });
-    video.addEventListener("error", revealMap);
-    replay.addEventListener("click", playIntro);
+    const resetParallax = () => {
+      visual.style.setProperty("--brain-x", "0px");
+      visual.style.setProperty("--brain-y", "0px");
+    };
 
     if (reducedMotion) {
       video.addEventListener("loadedmetadata", () => {
-        video.currentTime = Math.min(settleAt, video.duration || settleAt);
-        revealMap();
+        video.pause();
+        video.currentTime = Math.min(2.05, video.duration || 2.05);
       }, { once: true });
-      revealMap();
-    } else if (video.readyState >= 1) playIntro();
-    else video.addEventListener("loadedmetadata", playIntro, { once: true });
+      video.pause();
+      return;
+    }
+
+    if (!finePointer) return;
+    map.addEventListener("pointermove", (event) => {
+      const rect = visual.getBoundingClientRect();
+      const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+      const duration = Number.isFinite(video.duration) ? video.duration : 5.04;
+
+      video.pause();
+      video.currentTime = x * Math.max(0, duration - 0.04);
+      visual.style.setProperty("--brain-x", `${(x - 0.5) * 24}px`);
+      visual.style.setProperty("--brain-y", `${(y - 0.5) * 14}px`);
+      map.classList.add("is-interacting");
+
+      window.clearTimeout(resumeTimer);
+      resumeTimer = window.setTimeout(resume, 650);
+    });
+    map.addEventListener("pointerleave", () => {
+      map.classList.remove("is-interacting");
+      resetParallax();
+      window.clearTimeout(resumeTimer);
+      resume();
+    });
   }
 
   function renderOverview() {
@@ -391,7 +402,7 @@
       { value: state.themes.length, label: "Dashboard themes" },
       { value: new Set(p.flatMap((x) => splitMulti(x.domain))).size, label: "Research domains" },
       { value: new Set(p.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
-      { value: p.filter((x) => x.collab === "With partners").length, label: "With partners" },
+      { value: p.filter((x) => x.collab === "With partners").length, label: "Collaborations" },
     ];
     view().innerHTML = `
       <section class="intro">
@@ -430,7 +441,7 @@
       { value: new Set(subset.flatMap((x) => splitMulti(x.domain))).size, label: "Research domains" },
       { value: new Set(subset.map((x) => x.stage).filter(Boolean)).size, label: "Research stages" },
       { value: new Set(subset.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
-      { value: subset.filter((x) => x.collab === "With partners").length, label: "With partners" },
+      { value: subset.filter((x) => x.collab === "With partners").length, label: "Collaborations" },
     ];
     const facetControls = FACETS.map((f) => {
       const opts = countBy(subset, f.key, f.multi);
