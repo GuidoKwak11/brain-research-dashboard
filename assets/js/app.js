@@ -170,7 +170,7 @@
   }
 
   function cardHtml(p) {
-    const tags = p.tags.slice(0, 5).map((t) => `<span class="tag">${esc(t)}</span>`).join("");
+    const tags = p.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("");
     const link = p.website
       ? `<a class="card__link" href="${esc(p.website)}" target="_blank" rel="noopener">Visit project →</a>` : "";
     const hasCollab = p.collab === "Collaboration";
@@ -186,7 +186,7 @@
     const detail = [
       p.institute ? `<div class="card__detail-row"><span class="card__detail-k">Main institute:</span> ${esc(p.institute)}</div>` : "",
       p.department ? `<div class="card__detail-row"><span class="card__detail-k">Involved department:</span> ${esc(p.department)}</div>` : "",
-      hasCollab ? `<div class="card__detail-row card__detail-row--clamp"><span class="card__detail-k">Collaborating with:</span> ${esc(p.collaborators)}</div>` : "",
+      hasCollab ? `<div class="card__detail-row"><span class="card__detail-k">Collaborating with:</span> ${esc(p.collaborators)}</div>` : "",
     ].join("");
     return `<article class="card">
       <div class="card__badges">${badges}</div>
