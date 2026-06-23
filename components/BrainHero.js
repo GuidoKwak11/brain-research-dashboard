@@ -1,77 +1,84 @@
 /* Interactive homepage hero.
-   Edit this single config to change theme labels, links, or positions.
-   x/y position the hotspot; anchorX/anchorY position its neural connection. */
+   A rotating brain sits in a central disc; the site draws evenly spaced rays out to
+   eleven theme nodes around it. Positions are computed on a circle (no overlap), so
+   editing only means reordering brainThemes or tweaking the geometry constants below. */
 (function (global) {
   "use strict";
 
   const brainThemes = [
-    { id: 1, label: "Behaviour", href: "/themes/behaviour", x: 13, y: 31, anchorX: 45, anchorY: 45 },
-    { id: 2, label: "Brain and neuron structure", href: "/themes/brain-and-neuron-structure", x: 28, y: 13, anchorX: 48, anchorY: 38 },
-    { id: 3, label: "Brain development", href: "/themes/brain-development", x: 59, y: 10, anchorX: 52, anchorY: 35 },
-    { id: 4, label: "Cancer", href: "/themes/cancer", x: 73, y: 17, anchorX: 58, anchorY: 38 },
-    { id: 5, label: "Communication impairments", href: "/themes/communication-impairments", x: 88, y: 29, anchorX: 62, anchorY: 45 },
-    { id: 6, label: "Drug delivery", href: "/themes/drug-delivery", x: 78, y: 47, anchorX: 64, anchorY: 52 },
-    { id: 7, label: "Epilepsy", href: "/themes/epilepsy", x: 72, y: 76, anchorX: 60, anchorY: 60 },
-    { id: 8, label: "Ethics, society & care systems", href: "/themes/ethics-society-care-systems", x: 55, y: 84, anchorX: 54, anchorY: 64 },
-    { id: 9, label: "Neuroimaging & brain technology", href: "/themes/neuroimaging-brain-technology", x: 34, y: 82, anchorX: 48, anchorY: 62 },
-    { id: 10, label: "Neuromuscular disorders", href: "/themes/neuromuscular-disorders", x: 13, y: 67, anchorX: 43, anchorY: 55 },
-    { id: 11, label: "Stroke", href: "/themes/stroke", x: 30.5, y: 53.5, anchorX: 42, anchorY: 50 },
+    { id: 1,  label: "Behaviour",                       href: "/themes/behaviour" },
+    { id: 2,  label: "Brain and neuron structure",      href: "/themes/brain-and-neuron-structure" },
+    { id: 3,  label: "Brain development",               href: "/themes/brain-development" },
+    { id: 4,  label: "Cancer",                          href: "/themes/cancer" },
+    { id: 5,  label: "Communication impairments",       href: "/themes/communication-impairments" },
+    { id: 6,  label: "Drug delivery",                   href: "/themes/drug-delivery" },
+    { id: 7,  label: "Epilepsy",                        href: "/themes/epilepsy" },
+    { id: 8,  label: "Ethics, society & care systems",  href: "/themes/ethics-society-care-systems" },
+    { id: 9,  label: "Neuroimaging & brain technology", href: "/themes/neuroimaging-brain-technology" },
+    { id: 10, label: "Neuromuscular disorders",         href: "/themes/neuromuscular-disorders" },
+    { id: 11, label: "Stroke",                          href: "/themes/stroke" },
   ];
 
-  // These five coordinates track the circle endpoints already rendered in the
-  // source video. The remaining six themes are completed by our SVG overlay.
-  const videoNodeIds = new Set([2, 3, 6, 7, 11]);
+  // Geometry, in stage percentages. A = stage width / height (keeps the ring circular).
+  const GEO = { cx: 50, cy: 50, A: 1.3, ringRx: 33, discRx: 21, startDeg: -90 };
 
   const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
 
-  function placement(theme) {
-    if (theme.x <= 38) return "is-left";
-    if (theme.x >= 62) return "is-right";
-    return theme.y < 50 ? "is-top" : "is-bottom";
+  function placed(theme, index, count) {
+    const ang = ((GEO.startDeg + (index * 360) / count) * Math.PI) / 180;
+    const cos = Math.cos(ang), sin = Math.sin(ang);
+    const ringRy = GEO.ringRx * GEO.A;
+    const discRy = GEO.discRx * GEO.A;
+    const node = { x: GEO.cx + GEO.ringRx * cos, y: GEO.cy + ringRy * sin };
+    const inner = { x: GEO.cx + GEO.discRx * cos, y: GEO.cy + discRy * sin };
+    let side = "top";
+    if (cos > 0.25) side = "right";
+    else if (cos < -0.25) side = "left";
+    else side = sin < 0 ? "top" : "bottom";
+    return { ...theme, node, inner, side };
   }
 
-  function connectionHtml(theme) {
-    const videoNodeClass = videoNodeIds.has(theme.id) ? " is-video-node" : "";
-    return `<g class="brain-hero__connection${videoNodeClass}" data-theme-id="${theme.id}">
-      <line class="brain-hero__line brain-hero__line--base" x1="${theme.x}" y1="${theme.y}" x2="${theme.anchorX}" y2="${theme.anchorY}" pathLength="1" />
-      <line class="brain-hero__line brain-hero__line--pulse" x1="${theme.x}" y1="${theme.y}" x2="${theme.anchorX}" y2="${theme.anchorY}" pathLength="1" style="--pulse-delay:${theme.id * -0.27}s" />
-      <circle class="brain-hero__anchor" cx="${theme.anchorX}" cy="${theme.anchorY}" r="0.42" />
-    </g>`;
+  function rayHtml(t) {
+    return `<line class="brain-hero__ray" data-theme-id="${t.id}" x1="${t.inner.x.toFixed(2)}" y1="${t.inner.y.toFixed(2)}" x2="${t.node.x.toFixed(2)}" y2="${t.node.y.toFixed(2)}" pathLength="1" />
+      <circle class="brain-hero__spark" data-theme-id="${t.id}" r="0.7">
+        <animateMotion dur="3.6s" begin="${(t.id * -0.3).toFixed(2)}s" repeatCount="indefinite" path="M ${t.inner.x.toFixed(2)} ${t.inner.y.toFixed(2)} L ${t.node.x.toFixed(2)} ${t.node.y.toFixed(2)}" />
+      </circle>`;
   }
 
-  function hotspotHtml(theme) {
-    const videoNodeClass = videoNodeIds.has(theme.id) ? " is-video-node" : "";
-    return `<a class="brain-hero__hotspot ${placement(theme)}${videoNodeClass}" data-theme-id="${theme.id}" href="${escapeHtml(theme.href)}" aria-label="${escapeHtml(theme.label)}" style="--x:${theme.x}%;--y:${theme.y}%;--hotspot-delay:${theme.id * -0.19}s">
-      <span class="brain-hero__node" aria-hidden="true"><span class="brain-hero__node-core"></span></span>
-      <span class="brain-hero__label">${escapeHtml(theme.label)}</span>
+  function hotspotHtml(t) {
+    return `<a class="brain-hero__hotspot side-${t.side}" data-theme-id="${t.id}" href="${escapeHtml(t.href)}" aria-label="${escapeHtml(t.label)}" style="--nx:${t.node.x.toFixed(2)}%;--ny:${t.node.y.toFixed(2)}%">
+      <span class="brain-hero__node" aria-hidden="true"></span>
+      <span class="brain-hero__label">${escapeHtml(t.label)}</span>
     </a>`;
   }
 
   function render(options = {}) {
-    const assetPath = options.assetPath || "brain/openart-02178216296258000000000000000000000ffffc0a86fc0d40593_1782163076164_aef8943f.mp4";
+    const mp4 = options.assetPath || "brain/brain-rotating.mp4";
     const posterPath = options.posterPath || "brain/brain-hero-poster.jpg";
+    const themes = brainThemes.map((t, i) => placed(t, i, brainThemes.length));
 
-    return `<section class="brain-hero" id="brainHero" aria-labelledby="brainHeroTitle">
-      <div class="brain-hero__ambient" aria-hidden="true"></div>
+    return `<section class="brain-hero" id="brainHero" aria-label="Utrecht Science Park brain research theme map">
       <header class="brain-hero__copy">
-        <span class="brain-hero__eyebrow"><span aria-hidden="true"></span> Utrecht Science Park</span>
+        <span class="brain-hero__eyebrow"><span aria-hidden="true"></span> UTRECHT SCIENCE PARK</span>
         <h2 id="brainHeroTitle">Where brain research connects.</h2>
         <p>Explore eleven connected research themes shaping our understanding of the brain, health and human behaviour.</p>
       </header>
       <div class="brain-hero__stage">
-        <div class="brain-hero__media" aria-hidden="true">
-          <video class="brain-hero__video" autoplay muted loop playsinline preload="metadata" poster="${escapeHtml(posterPath)}">
-            <source src="${escapeHtml(assetPath)}" type="video/mp4" />
-          </video>
-          <div class="brain-hero__media-vignette"></div>
+        <div class="brain-hero__scene">
+          <div class="brain-hero__disc">
+            <video class="brain-hero__video" autoplay muted loop playsinline preload="metadata" aria-hidden="true" poster="${escapeHtml(posterPath)}">
+              <source src="${escapeHtml(mp4)}" type="video/mp4" />
+            </video>
+            <span class="brain-hero__disc-ring" aria-hidden="true"></span>
+          </div>
+          <svg class="brain-hero__rays" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            ${themes.map(rayHtml).join("")}
+          </svg>
+          <nav class="brain-hero__hotspots" aria-label="Brain research themes">
+            ${themes.map(hotspotHtml).join("")}
+          </nav>
         </div>
-        <svg class="brain-hero__connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          ${brainThemes.map(connectionHtml).join("")}
-        </svg>
-        <nav class="brain-hero__hotspots" aria-label="Brain research themes">
-          ${brainThemes.map(hotspotHtml).join("")}
-        </nav>
       </div>
       <div class="brain-hero__footer">
         <span><i aria-hidden="true"></i> Live research landscape</span>
@@ -86,15 +93,13 @@
 
     const video = root.querySelector(".brain-hero__video");
     const links = [...root.querySelectorAll(".brain-hero__hotspot")];
-    const connections = [...root.querySelectorAll(".brain-hero__connection")];
+    const rays = [...root.querySelectorAll(".brain-hero__ray, .brain-hero__spark")];
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    let frame = 0;
 
     const setActive = (id) => {
       root.dataset.activeTheme = id || "";
       links.forEach((link) => link.classList.toggle("is-active", link.dataset.themeId === String(id)));
-      connections.forEach((line) => line.classList.toggle("is-active", line.dataset.themeId === String(id)));
+      rays.forEach((ray) => ray.classList.toggle("is-active", ray.dataset.themeId === String(id)));
     };
 
     links.forEach((link) => {
@@ -107,6 +112,7 @@
       link.addEventListener("blur", () => setActive(""));
       if (typeof options.onThemeSelect === "function") {
         link.addEventListener("click", (event) => {
+          if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
           event.preventDefault();
           const theme = brainThemes.find((item) => String(item.id) === id);
           if (theme) options.onThemeSelect(theme, event);
@@ -115,29 +121,9 @@
     });
 
     if (reducedMotion && video) {
-      const pauseAtPosterFrame = () => {
-        video.pause();
-        if (Number.isFinite(video.duration)) video.currentTime = Math.min(1.5, video.duration);
-      };
-      if (video.readyState >= 1) pauseAtPosterFrame();
-      else video.addEventListener("loadedmetadata", pauseAtPosterFrame, { once: true });
-    }
-
-    if (!reducedMotion && finePointer) {
-      root.addEventListener("pointermove", (event) => {
-        const bounds = root.getBoundingClientRect();
-        const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
-        const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => {
-          root.style.setProperty("--brain-shift-x", `${x * 8}px`);
-          root.style.setProperty("--brain-shift-y", `${y * 5}px`);
-        });
-      });
-      root.addEventListener("pointerleave", () => {
-        root.style.setProperty("--brain-shift-x", "0px");
-        root.style.setProperty("--brain-shift-y", "0px");
-      });
+      const pause = () => video.pause();
+      if (video.readyState >= 2) pause();
+      else video.addEventListener("loadeddata", pause, { once: true });
     }
   }
 

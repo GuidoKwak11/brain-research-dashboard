@@ -7,7 +7,7 @@
   const CONFIG = {
     dataFile: "data/2final_USP_brain_research_dashboard_data.xlsx",
     sheet: "Dashboard data",
-    brainVideo: "brain/openart-02178216296258000000000000000000000ffffc0a86fc0d40593_1782163076164_aef8943f.mp4",
+    brainVideo: "brain/brain-rotating.mp4",
     brainPoster: "brain/brain-hero-poster.jpg",
   };
 
