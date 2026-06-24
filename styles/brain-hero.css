@@ -1,6 +1,6 @@
-/* Interactive brain hero — light, clean, UU house style.
-   A rotating brain sits in a central disc; the site draws rays out to eleven theme
-   nodes. Geometry is computed in components/BrainHero.js. */
+/* Interactive brain hero — light, clean, UU house style ("living research landscape").
+   A rotating brain fires synaptic signals along rays to eleven theme nodes, each
+   carrying its live project count. Geometry is computed in components/BrainHero.js. */
 .brain-hero {
   position: relative;
   width: 100vw;
@@ -26,11 +26,11 @@
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  color: #8a6d00;
-  font-family: var(--font-body);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
+  color: #7a6000;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 .brain-hero__eyebrow > span {
@@ -75,6 +75,21 @@
   aspect-ratio: 13 / 10;
 }
 
+/* Faint orbital ring the nodes are seated on. */
+.brain-hero__orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 66%;
+  height: 85.8%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(0, 18, 64, 0.07);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  animation: brain-hero-orbit-in 700ms ease-out both;
+}
+
 /* Central disc holding the rotating brain. */
 .brain-hero__disc {
   position: absolute;
@@ -89,15 +104,27 @@
   box-shadow:
     0 0 0 7px #ffffff,
     0 0 0 8px rgba(0, 18, 64, 0.06),
+    0 0 90px -8px rgba(255, 205, 0, 0.5),
     0 34px 70px -34px rgba(0, 18, 64, 0.55);
-  z-index: 1;
+  z-index: 2;
+  animation: brain-hero-disc-in 640ms cubic-bezier(.2,.7,.2,1) backwards;
+}
+.brain-hero__halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 62%, rgba(255, 205, 0, 0.16), transparent 58%);
+  pointer-events: none;
+  z-index: 0;
 }
 .brain-hero__video {
+  position: relative;
   width: 100%;
   height: 100%;
   display: block;
   object-fit: cover;
   pointer-events: none;
+  z-index: 1;
   -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 64%, transparent 92%);
   mask-image: radial-gradient(circle at 50% 50%, #000 64%, transparent 92%);
 }
@@ -106,10 +133,11 @@
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
+  z-index: 2;
   box-shadow: inset 0 0 0 1px rgba(255, 205, 0, 0.28), inset 0 0 40px rgba(0, 0, 0, 0.55);
 }
 
-/* Rays from the disc edge to each node. */
+/* Rays from the disc edge to each node + the synaptic signal travelling along them. */
 .brain-hero__rays {
   position: absolute;
   inset: 0;
@@ -124,14 +152,20 @@
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
   stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
   transition: stroke 200ms ease, stroke-width 200ms ease;
+  animation: brain-hero-ray-draw 520ms ease-out both;
+  animation-delay: calc(160ms + var(--i) * 42ms);
 }
 .brain-hero__ray.is-active { stroke: #f5b400; stroke-width: 1.8; }
 .brain-hero__spark {
-  fill: rgba(255, 197, 0, 0.7);
-  vector-effect: non-scaling-stroke;
+  fill: #ffc500;
+  opacity: 0.55;
+  filter: drop-shadow(0 0 1.4px rgba(255, 197, 0, 0.9));
+  transition: opacity 200ms ease;
 }
-.brain-hero__spark.is-active { fill: #ffcd00; }
+.brain-hero__spark.is-active { fill: #ffcd00; opacity: 1; }
 
 /* Nodes + labels. */
 .brain-hero__hotspots { position: absolute; inset: 0; z-index: 3; }
@@ -152,9 +186,9 @@
   text-decoration: none;
 }
 .brain-hero__hotspot.side-right  { flex-direction: row; }
-.brain-hero__hotspot.side-left   { flex-direction: row-reverse; text-align: right; }
-.brain-hero__hotspot.side-top    { flex-direction: column; text-align: center; }
-.brain-hero__hotspot.side-bottom { flex-direction: column-reverse; text-align: center; }
+.brain-hero__hotspot.side-left   { flex-direction: row-reverse; }
+.brain-hero__hotspot.side-top    { flex-direction: column; }
+.brain-hero__hotspot.side-bottom { flex-direction: column-reverse; }
 /* Push the label outward so it sits clear of the node. */
 .brain-hero__hotspot.side-right  { transform: translate(0, -50%); }
 .brain-hero__hotspot.side-left   { transform: translate(-100%, -50%); }
@@ -169,23 +203,57 @@
   border-radius: 50%;
   background: #ffcd00;
   border: 2.5px solid #ffffff;
-  box-shadow: 0 0 0 4px rgba(255, 205, 0, 0.2), 0 2px 7px rgba(0, 18, 64, 0.2);
+  box-shadow:
+    0 0 0 4px rgba(255, 205, 0, calc(0.12 + 0.2 * var(--weight, 0))),
+    0 0 calc(5px + 12px * var(--weight, 0)) rgba(255, 190, 0, calc(0.18 + 0.34 * var(--weight, 0))),
+    0 2px 7px rgba(0, 18, 64, 0.2);
   transition: transform 180ms cubic-bezier(.2,.7,.2,1), box-shadow 180ms ease;
+  animation: brain-hero-node-in 460ms cubic-bezier(.2,1.5,.4,1) backwards;
+  animation-delay: calc(240ms + var(--i) * 46ms);
 }
 .brain-hero__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   max-width: 190px;
   padding: 8px 13px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 18, 64, 0.07);
+  border-radius: 11px;
+  box-shadow: 0 10px 26px -14px rgba(0, 18, 64, 0.5), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+  animation: brain-hero-label-in 440ms ease-out backwards;
+  animation-delay: calc(320ms + var(--i) * 46ms);
+}
+.brain-hero__name {
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
-  background: #ffffff;
-  border: 1px solid rgba(0, 18, 64, 0.07);
-  border-radius: 11px;
-  box-shadow: 0 10px 26px -14px rgba(0, 18, 64, 0.5), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
-  transition: color 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
+.brain-hero__count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #a87600;
+  transition: color 160ms ease;
+}
+.brain-hero__count-unit {
+  font-size: 0.56rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: #8a93a4;
+}
+.brain-hero__hotspot.side-right  .brain-hero__label { align-items: flex-start; text-align: left; }
+.brain-hero__hotspot.side-left   .brain-hero__label { align-items: flex-end;   text-align: right; }
+.brain-hero__hotspot.side-top    .brain-hero__label,
+.brain-hero__hotspot.side-bottom .brain-hero__label { align-items: center; text-align: center; }
 
 .brain-hero__hotspot:hover,
 .brain-hero__hotspot:focus-visible,
@@ -194,16 +262,17 @@
 .brain-hero__hotspot:focus-visible .brain-hero__node,
 .brain-hero__hotspot.is-active .brain-hero__node {
   transform: scale(1.25);
-  box-shadow: 0 0 0 5px rgba(255, 205, 0, 0.28), 0 3px 10px rgba(0, 18, 64, 0.28);
+  box-shadow: 0 0 0 5px rgba(255, 205, 0, 0.32), 0 0 16px rgba(255, 190, 0, 0.5), 0 3px 10px rgba(0, 18, 64, 0.28);
 }
 .brain-hero__hotspot:hover .brain-hero__label,
 .brain-hero__hotspot:focus-visible .brain-hero__label,
 .brain-hero__hotspot.is-active .brain-hero__label {
-  color: #001240;
-  background: #ffffff;
   border-color: rgba(255, 205, 0, 0.85);
   box-shadow: 0 10px 24px -10px rgba(0, 18, 64, 0.45), 0 0 0 1px rgba(255, 205, 0, 0.5);
 }
+.brain-hero__hotspot:hover .brain-hero__count,
+.brain-hero__hotspot:focus-visible .brain-hero__count,
+.brain-hero__hotspot.is-active .brain-hero__count { color: #001240; }
 .brain-hero__hotspot:focus-visible .brain-hero__label {
   outline: 2px solid #001240;
   outline-offset: 2px;
@@ -220,16 +289,39 @@
   max-width: 940px;
   margin: 6px auto 0;
   padding-top: 16px;
-  color: #6b7488;
+  color: #54607a;
   border-top: 1px solid rgba(0, 18, 64, 0.1);
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .brain-hero__footer span { display: flex; align-items: center; gap: 8px; }
 .brain-hero__footer i { width: 6px; height: 6px; border-radius: 50%; background: #24a793; box-shadow: 0 0 0 3px rgba(36, 167, 147, 0.18); }
+
+/* --- Entrance sequence ------------------------------------------------ */
+@keyframes brain-hero-disc-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.86); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes brain-hero-orbit-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes brain-hero-ray-draw {
+  from { stroke-dashoffset: 1; opacity: 0; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+@keyframes brain-hero-node-in {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes brain-hero-label-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 @media (max-width: 980px) {
   .brain-hero__copy h2 { font-size: 3.1rem; }
@@ -249,12 +341,14 @@
   .brain-hero__stage { margin-top: 18px; }
   /* Brain in a centered circle on top, themes as a clean list below. */
   .brain-hero__scene { aspect-ratio: auto; display: flex; flex-direction: column; align-items: center; }
+  .brain-hero__orbit { display: none; }
   .brain-hero__disc {
     position: relative;
     left: auto; top: auto;
     transform: none;
     width: min(72vw, 320px);
     height: min(72vw, 320px);
+    animation: none;
   }
   .brain-hero__rays { display: none; }
   .brain-hero__hotspots {
@@ -281,14 +375,25 @@
     background: rgba(255, 255, 255, 0.7);
     border: 1px solid rgba(0, 18, 64, 0.08);
     border-radius: 9px;
+    animation: none;
   }
-  .brain-hero__label {
+  .brain-hero__node { animation: none; }
+  .brain-hero__label,
+  .brain-hero__hotspot.side-left .brain-hero__label,
+  .brain-hero__hotspot.side-right .brain-hero__label,
+  .brain-hero__hotspot.side-top .brain-hero__label,
+  .brain-hero__hotspot.side-bottom .brain-hero__label {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
     max-width: none;
     padding: 0;
     background: transparent;
     border: 0;
     box-shadow: none;
-    backdrop-filter: none;
+    text-align: left;
+    animation: none;
   }
   .brain-hero__hotspot:hover .brain-hero__label,
   .brain-hero__hotspot.is-active .brain-hero__label { background: transparent; border: 0; box-shadow: none; }

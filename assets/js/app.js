@@ -293,8 +293,15 @@
   }
 
   function renderHome() {
+    // state.themes is [[themeName, projectCount], ...] — feed the live counts to the hero.
+    const themeCounts = Object.fromEntries(state.themes);
     const brainHero = window.BrainHero
-      ? window.BrainHero.render({ assetPath: CONFIG.brainVideo, posterPath: CONFIG.brainPoster })
+      ? window.BrainHero.render({
+          assetPath: CONFIG.brainVideo,
+          posterPath: CONFIG.brainPoster,
+          counts: themeCounts,
+          total: state.projects.length,
+        })
       : "";
     view().innerHTML = `
       ${brainHero}

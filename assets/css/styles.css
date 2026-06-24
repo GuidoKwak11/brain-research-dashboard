@@ -27,6 +27,7 @@
   --shadow: 0 10px 28px -20px rgba(0, 0, 0, 0.4);
   --font-head: "Merriweather", Georgia, "Times New Roman", serif;
   --font-body: "Open Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
 * { box-sizing: border-box; }
