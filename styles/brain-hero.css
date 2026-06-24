@@ -65,7 +65,8 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  margin: 8px auto 0;
+  /* Extra top room so the 12 o'clock node clears the intro copy. */
+  margin: 48px auto 0;
   display: flex;
   justify-content: center;
 }
