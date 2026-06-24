@@ -480,6 +480,7 @@ body {
 .badge--stage { color: #333333; }
 .badge--collab { background: #eaf7f4; border-color: #bfe6df; }
 .badge--solo { background: #f4f4f4; border-color: #e2e2e2; color: #595959; }
+.badge--type { background: #fff6d9; border-color: #f4e3a6; color: #6b5300; text-transform: capitalize; }
 .card__detail { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--muted); }
 .card__detail-k { font-weight: 700; color: #333333; }
 .card__title { font-family: var(--font-head); font-size: 1.05rem; font-weight: 700; margin: 0; color: var(--black); }

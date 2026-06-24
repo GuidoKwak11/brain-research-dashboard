@@ -5,7 +5,7 @@
   "use strict";
 
   const CONFIG = {
-    dataFile: "data/2final_USP_brain_research_dashboard_data.xlsx",
+    dataFile: "data/USP_brain_research_dashboard_data.xlsx",
     sheet: "Dashboard data",
     brainVideo: "brain/brain-rotating.mp4",
     brainPoster: "brain/brain-hero-poster.jpg",
@@ -14,7 +14,7 @@
   // Source column headers (must match the Excel header row).
   const COL = {
     title: "Research / project title",
-    theme: "Dashboard theme (hoofdpagina's in het dashboard)",
+    theme: "General brain research theme",
     institute: "Main institute",
     department: "Involved internal department / research group",
     collaborators: "Collaborating departments / partners",
@@ -23,14 +23,18 @@
     domain: "Research domain",
     disease: "Disease / condition / application",
     methods: "Methods & technologies",
+    population: "Population / model system",
     stage: "Research stage",
     description: "Dashboard description",
     tags: "Tags / subthemes",
+    contact: "Main contact / onderzoeker / contactafdeling",
+    recordType: "Record type",
   };
 
   // Facets shown inside a theme view (theme itself is fixed by the active tab).
   const FACETS = [
     { key: "innovation", label: "Innovation theme", multi: true },
+    { key: "recordType", label: "Record type", multi: false },
     { key: "stage", label: "Research stage", multi: false },
     { key: "domain", label: "Research domain", multi: true },
     { key: "institute", label: "Institute", multi: false },
@@ -49,7 +53,7 @@
     projects: [],
     themes: [],            // [name, count] ordered by count desc
     activeTab: HOME,
-    filters: { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" },
+    filters: { innovation: "", recordType: "", stage: "", domain: "", institute: "", collab: "", q: "" },
     charts: [],
     rebuildCharts: null,   // set per theme view so pill removal can refresh charts
   };
@@ -103,9 +107,12 @@
           domain: cell(r, "domain"),
           disease: cell(r, "disease"),
           methods: cell(r, "methods"),
+          population: cell(r, "population"),
           stage: cell(r, "stage"),
           description: cell(r, "description"),
           tags: splitMulti(cell(r, "tags")),
+          contact: cell(r, "contact"),
+          recordType: cell(r, "recordType"),
         };
       })
       .filter((p) => p.title);
@@ -128,7 +135,8 @@
   // Projects belonging to the active tab (whole theme, before facet filters).
   function themeProjects() {
     if (state.activeTab === OVERVIEW) return state.projects;
-    return state.projects.filter((p) => p.theme === state.activeTab);
+    // Multi-valued theme: include a project if the active theme is one of its themes.
+    return state.projects.filter((p) => valuesOf(p, "theme", true).includes(state.activeTab));
   }
 
   // Apply the facet + search filters on top of the theme subset. Passing
@@ -177,9 +185,13 @@
     const collabBadge = hasCollab
       ? `<span class="badge badge--collab"><span class="badge__dot" style="background:var(--green)"></span>Collaboration</span>`
       : `<span class="badge badge--solo"><span class="badge__dot" style="background:#b9b9b9"></span>No Collaboration</span>`;
+    const themeBadges = state.activeTab === OVERVIEW
+      ? splitMulti(p.theme).map((t) =>
+          `<span class="badge"><span class="badge__dot" style="background:${themeColor(t)}"></span>${esc(t)}</span>`).join("")
+      : "";
     const badges = [
-      state.activeTab === OVERVIEW
-        ? `<span class="badge"><span class="badge__dot" style="background:${themeColor(p.theme)}"></span>${esc(p.theme)}</span>` : "",
+      themeBadges,
+      p.recordType ? `<span class="badge badge--type">${esc(p.recordType)}</span>` : "",
       p.stage ? `<span class="badge badge--stage">${esc(p.stage)}</span>` : "",
       collabBadge,
     ].join("");
@@ -187,6 +199,8 @@
       p.institute ? `<div class="card__detail-row"><span class="card__detail-k">Main institute:</span> ${esc(p.institute)}</div>` : "",
       p.department ? `<div class="card__detail-row"><span class="card__detail-k">Involved department:</span> ${esc(p.department)}</div>` : "",
       hasCollab ? `<div class="card__detail-row"><span class="card__detail-k">Collaborating with:</span> ${esc(p.collaborators)}</div>` : "",
+      p.population ? `<div class="card__detail-row"><span class="card__detail-k">Population / model:</span> ${esc(p.population)}</div>` : "",
+      p.contact ? `<div class="card__detail-row"><span class="card__detail-k">Main contact:</span> ${esc(p.contact)}</div>` : "",
     ].join("");
     return `<article class="card">
       <div class="card__badges">${badges}</div>
@@ -222,7 +236,7 @@
 
   function selectTab(tab) {
     state.activeTab = tab;
-    state.filters = { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" };
+    state.filters = { innovation: "", recordType: "", stage: "", domain: "", institute: "", collab: "", q: "" };
     const slug = tab === HOME ? "" : tab === OVERVIEW ? "overview" : encodeURIComponent(tab);
     const current = decodeURIComponent((location.hash || "").slice(1));
     const expected = tab === HOME ? "" : tab === OVERVIEW ? "overview" : tab;
@@ -274,7 +288,7 @@
   }
 
   function removeFilter(key) {
-    if (key === "__all__") state.filters = { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" };
+    if (key === "__all__") state.filters = { innovation: "", recordType: "", stage: "", domain: "", institute: "", collab: "", q: "" };
     else state.filters[key] = "";
     const si = $("searchInput");
     if (si) si.value = state.filters.q;
@@ -347,12 +361,12 @@
       <section class="charts">
         <figure class="chart-card chart-card--wide"><figcaption>Projects per theme <span class="chart-hint">Click to open</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cTheme"></canvas></div></figure>
         <figure class="chart-card"><figcaption>Innovation theme</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cInnovation"></canvas></div></figure>
-        <figure class="chart-card"><figcaption>Research stage</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cStage"></canvas></div></figure>
+        <figure class="chart-card"><figcaption>Record type</figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cRecordType"></canvas></div></figure>
       </section>`;
 
     state.charts.push(DashCharts.makeBar($("cTheme"), state.themes, (name) => selectTab(name), { horizontal: true }));
     state.charts.push(DashCharts.makeDoughnut($("cInnovation"), countBy(p, "innovation", true), null));
-    state.charts.push(DashCharts.makeBar($("cStage"), countBy(p, "stage", false), null, { horizontal: true }));
+    state.charts.push(DashCharts.makeBar($("cRecordType"), countBy(p, "recordType", false), null, { horizontal: true }));
 
     view().querySelectorAll(".theme-tile").forEach((t) =>
       t.addEventListener("click", () => selectTab(t.dataset.theme)));
@@ -459,7 +473,8 @@
     const status = $("loadStatus");
     try {
       state.projects = await loadData();
-      state.themes = countBy(state.projects, "theme", false);
+      // Theme is multi-valued (";"-separated) — a project can belong to several themes.
+      state.themes = countBy(state.projects, "theme", true);
       status.textContent = `${state.projects.length} projects loaded`;
       status.dataset.state = "ready";
       $("dataMeta").textContent = `${state.projects.length} projects · ${state.themes.length} themes`;
@@ -479,7 +494,7 @@
         const tab = tabFromHash();
         if (tab !== state.activeTab) {
           state.activeTab = tab;
-          state.filters = { innovation: "", stage: "", domain: "", institute: "", collab: "", q: "" };
+          state.filters = { innovation: "", recordType: "", stage: "", domain: "", institute: "", collab: "", q: "" };
           renderTabs();
           render();
           window.scrollTo({ top: 0, behavior: "smooth" });
