@@ -451,6 +451,7 @@ body {
   gap: 16px;
 }
 .card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -459,9 +460,34 @@ body {
   flex-direction: column;
   gap: 12px;
   box-shadow: var(--shadow);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
-.card:hover { transform: translateY(-3px); box-shadow: 0 16px 32px -20px rgba(0, 0, 0, 0.5); }
+.card--link { cursor: pointer; }
+.card--link:hover,
+.card--link:focus-within {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 38px -20px rgba(0, 0, 0, 0.55);
+  border-color: rgba(192, 10, 53, 0.45);
+}
+/* Persistent corner cue that the whole card opens a detail page (visible on touch). */
+.card--link::after {
+  content: "↗";
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fbe9ee;
+  color: var(--red);
+  font-size: 0.86rem;
+  font-weight: 700;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.card--link:hover::after,
+.card--link:focus-within::after { background: var(--red); color: #fff; transform: scale(1.08); }
 .card__badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .badge {
   display: inline-flex;
@@ -509,15 +535,20 @@ body {
 }
 .tag:hover { background: #ffe9a8; border-color: #e7c860; }
 .tag.is-active { background: #ffcd00; border-color: #e0b400; color: #2a2200; font-weight: 700; }
+.card--link .card__badges { padding-right: 30px; }
 .card__more {
   margin-top: auto;
-  align-self: flex-start;
-  color: var(--red);
-  font-size: 0.82rem;
-  font-weight: 700;
-  background: none; border: 0; padding: 6px 0 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  color: var(--red); font-size: 0.84rem; font-weight: 700;
+  background: #fff5f7; border: 1px solid #f3d6de;
+  border-radius: 8px; padding: 9px 12px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
-.card__more:hover { text-decoration: underline; }
+.card--link:hover .card__more,
+.card--link:focus-within .card__more { background: var(--red); color: #fff; border-color: var(--red); }
+.card__more-arrow { transition: transform 0.15s ease; }
+.card--link:hover .card__more-arrow,
+.card--link:focus-within .card__more-arrow { transform: translateX(4px); }
 .empty { color: var(--muted); text-align: center; padding: 40px; }
 
 /* ---------- Project detail page ---------- */

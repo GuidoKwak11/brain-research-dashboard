@@ -245,13 +245,16 @@
       p.department ? `<div class="card__detail-row"><span class="card__detail-k">Involved department:</span> ${esc(p.department)}</div>` : "",
       hasCollab ? `<div class="card__detail-row"><span class="card__detail-k">Collaborating with:</span> ${esc(p.collaborators)}</div>` : "",
     ].join("");
-    return `<article class="card">
+    return `<article class="card card--link" data-open="${p.id}">
       <div class="card__badges">${badges}</div>
       <h3 class="card__title"><button type="button" class="card__open" data-open="${p.id}">${esc(p.title)}</button></h3>
       <p class="card__desc">${esc(p.description)}</p>
       <div class="card__detail">${detail}</div>
       ${tags ? `<div class="card__tags">${tags}</div>` : ""}
-      <button type="button" class="card__more" data-open="${p.id}">View full project →</button>
+      <div class="card__more" data-open="${p.id}" aria-hidden="true">
+        <span>View full project</span>
+        <span class="card__more-arrow" aria-hidden="true">→</span>
+      </div>
     </article>`;
   }
 
@@ -531,12 +534,13 @@
       applyFilters();
     });
 
-    // Delegated: open a project's full page, or toggle a tag filter, from any card.
+    // Delegated: a tag toggles its filter; clicking anywhere else on a card opens
+    // the project's full page. Tags are checked first since they sit inside the card.
     $("projectGrid").addEventListener("click", (e) => {
-      const opener = e.target.closest("[data-open]");
-      if (opener) { openProject(Number(opener.dataset.open)); return; }
       const tagBtn = e.target.closest(".tag[data-tag]");
-      if (tagBtn) applyTagFilter(tagBtn.dataset.tag);
+      if (tagBtn) { applyTagFilter(tagBtn.dataset.tag); return; }
+      const opener = e.target.closest("[data-open]");
+      if (opener) openProject(Number(opener.dataset.open));
     });
 
     applyFilters();
