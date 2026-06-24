@@ -32,14 +32,22 @@
   };
 
   // Facets shown inside a theme view (theme itself is fixed by the active tab).
+  // Model system + research stage use the normalised buckets so they stay clean.
   const FACETS = [
     { key: "innovation", label: "Innovation theme", multi: true },
+    { key: "modelNorm", label: "Model system", multi: true },
+    { key: "stageNorm", label: "Research stage", multi: false },
     { key: "recordType", label: "Record type", multi: false },
-    { key: "stage", label: "Research stage", multi: false },
-    { key: "domain", label: "Research domain", multi: true },
     { key: "institute", label: "Institute", multi: false },
     { key: "collab", label: "Collaboration", multi: false },
   ];
+
+  // One filter slot per facet, plus a free-text search and a tag chip filter.
+  function emptyFilters() {
+    const f = { q: "", tag: "" };
+    FACETS.forEach((x) => { f[x.key] = ""; });
+    return f;
+  }
 
   const HOME = "__home__";
   const OVERVIEW = "__overview__";
@@ -53,7 +61,9 @@
     projects: [],
     themes: [],            // [name, count] ordered by count desc
     activeTab: HOME,
-    filters: { innovation: "", recordType: "", stage: "", domain: "", institute: "", collab: "", q: "" },
+    activeProject: null,   // project id when a detail page is open
+    returnTab: OVERVIEW,   // tab to go back to from a detail page
+    filters: emptyFilters(),
     charts: [],
     rebuildCharts: null,   // set per theme view so pill removal can refresh charts
   };
@@ -65,6 +75,31 @@
   function splitMulti(value) {
     if (!value) return [];
     return String(value).split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  // The raw "Research stage" and "Population / model system" fields are free-text
+  // with a long messy tail. We roll them into a small set of meaningful buckets so
+  // their charts show every project (no "Other"), keyed on what's actually insightful.
+  function normStage(raw) {
+    const prim = String(raw || "").split(" / ")[0].toLowerCase();
+    if (!prim) return "";
+    if (prim.includes("student")) return "Student project";
+    if (prim.includes("fundamental")) return "Fundamental";
+    if (prim.includes("translational")) return "Translational";
+    if (prim.includes("clinical")) return "Clinical";
+    if (prim.includes("applied") || prim.includes("impact")) return "Applied / impact";
+    return "Infrastructure & methods";
+  }
+  function normModelToken(token) {
+    const s = String(token || "").toLowerCase();
+    const has = (...ks) => ks.some((k) => s.includes(k));
+    if (has("comput", "silico", "algorithm", "simulation", "machine learning", "mri", "fmri", "eeg", "imaging data", "neural data", "dataset", "registry", "database", "/data", "data-")) return "Computational & data";
+    if (has("organoid", "ipsc", "cell", "tissue", "in vitro", "culture", "biopsy", "sample", "line", "assembloid", "slice", "spheroid", "neuron", "axon", "protein", "molecular", "circuit", "-on-chip", "tumour model", "tumor model", "disease model", "embryo")) return "Cell, tissue & organoid";
+    if (has("animal", "mouse", "mice", "murine", "rat", "rodent", "zebrafish", "in vivo", "xenopus", "primate", "drosophila", "elegans", "pig", "sheep", "dog", "cat", "comparative model")) return "Animal models";
+    return "Humans & participants";
+  }
+  function modelSystems(population) {
+    return [...new Set(splitMulti(population).map(normModelToken))].join("; ");
   }
 
   // Resolve each logical field to a column index by header text, tolerant to
@@ -95,6 +130,8 @@
       .map((r) => {
         const collabRaw = cell(r, "collaborators");
         const hasCollab = collabRaw !== "" && !/^(no|none|n\/a|-|geen)$/i.test(collabRaw);
+        const stage = cell(r, "stage");
+        const population = cell(r, "population");
         return {
           title: cell(r, "title"),
           theme: cell(r, "theme"),
@@ -107,15 +144,18 @@
           domain: cell(r, "domain"),
           disease: cell(r, "disease"),
           methods: cell(r, "methods"),
-          population: cell(r, "population"),
-          stage: cell(r, "stage"),
+          population,
+          modelNorm: modelSystems(population),
+          stage,
+          stageNorm: normStage(stage),
           description: cell(r, "description"),
           tags: splitMulti(cell(r, "tags")),
           contact: cell(r, "contact"),
           recordType: cell(r, "recordType"),
         };
       })
-      .filter((p) => p.title);
+      .filter((p) => p.title)
+      .map((p, i) => ({ ...p, id: i }));
   }
 
   // --- Aggregation --------------------------------------------------------
@@ -145,12 +185,14 @@
   // (cross-filtering).
   function applyFacets(projects, except) {
     const needle = state.filters.q.trim().toLowerCase();
+    const tag = state.filters.tag;
     return projects.filter((p) => {
       for (const f of FACETS) {
         if (f.key === except) continue;
         const sel = state.filters[f.key];
         if (sel && !valuesOf(p, f.key, f.multi).includes(sel)) return false;
       }
+      if (tag && !p.tags.includes(tag)) return false;
       if (needle) {
         const hay = [p.title, p.description, p.tags.join(" "), p.methods, p.disease, p.domain]
           .join(" ").toLowerCase();
@@ -177,10 +219,13 @@
       .join("")}</section>`;
   }
 
+  function tagChipsHtml(tags, activeTag) {
+    return tags.map((t) =>
+      `<button type="button" class="tag${t === activeTag ? " is-active" : ""}" data-tag="${esc(t)}" aria-pressed="${t === activeTag}">${esc(t)}</button>`).join("");
+  }
+
   function cardHtml(p) {
-    const tags = p.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("");
-    const link = p.website
-      ? `<a class="card__link" href="${esc(p.website)}" target="_blank" rel="noopener">Visit project →</a>` : "";
+    const tags = tagChipsHtml(p.tags, state.filters.tag);
     const hasCollab = p.collab === "Collaboration";
     const collabBadge = hasCollab
       ? `<span class="badge badge--collab"><span class="badge__dot" style="background:var(--green)"></span>Collaboration</span>`
@@ -199,16 +244,14 @@
       p.institute ? `<div class="card__detail-row"><span class="card__detail-k">Main institute:</span> ${esc(p.institute)}</div>` : "",
       p.department ? `<div class="card__detail-row"><span class="card__detail-k">Involved department:</span> ${esc(p.department)}</div>` : "",
       hasCollab ? `<div class="card__detail-row"><span class="card__detail-k">Collaborating with:</span> ${esc(p.collaborators)}</div>` : "",
-      p.population ? `<div class="card__detail-row"><span class="card__detail-k">Population / model:</span> ${esc(p.population)}</div>` : "",
-      p.contact ? `<div class="card__detail-row"><span class="card__detail-k">Main contact:</span> ${esc(p.contact)}</div>` : "",
     ].join("");
     return `<article class="card">
       <div class="card__badges">${badges}</div>
-      <h3 class="card__title">${esc(p.title)}</h3>
+      <h3 class="card__title"><button type="button" class="card__open" data-open="${p.id}">${esc(p.title)}</button></h3>
       <p class="card__desc">${esc(p.description)}</p>
       <div class="card__detail">${detail}</div>
-      <div class="card__tags">${tags}</div>
-      ${link}
+      ${tags ? `<div class="card__tags">${tags}</div>` : ""}
+      <button type="button" class="card__more" data-open="${p.id}">View full project →</button>
     </article>`;
   }
 
@@ -236,7 +279,8 @@
 
   function selectTab(tab) {
     state.activeTab = tab;
-    state.filters = { innovation: "", recordType: "", stage: "", domain: "", institute: "", collab: "", q: "" };
+    state.activeProject = null;
+    state.filters = emptyFilters();
     const slug = tab === HOME ? "" : tab === OVERVIEW ? "overview" : encodeURIComponent(tab);
     const current = decodeURIComponent((location.hash || "").slice(1));
     const expected = tab === HOME ? "" : tab === OVERVIEW ? "overview" : tab;
@@ -248,12 +292,38 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function tabFromHash() {
+  // Open a project's full-detail page; remember where to return to.
+  function openProject(id) {
+    if (state.activeProject == null) state.returnTab = state.activeTab;
+    state.activeProject = id;
+    history.pushState(null, "", `#project/${id}`);
+    renderTabs();
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // Toggle a clickable tag as a filter within the current theme.
+  function applyTagFilter(tag) {
+    state.filters.tag = state.filters.tag === tag ? "" : tag;
+    if (state.rebuildCharts) state.rebuildCharts();
+    applyFilters();
+  }
+
+  // Read the URL hash and render the matching view (theme, overview, project, home).
+  function applyRoute() {
     const raw = decodeURIComponent((location.hash || "").slice(1));
-    if (!raw) return HOME;
-    if (raw === "overview") return OVERVIEW;
-    if (raw && state.themes.some(([name]) => name === raw)) return raw;
-    return HOME;
+    const m = raw.match(/^project\/(\d+)$/);
+    if (m && state.projects.some((p) => p.id === Number(m[1]))) {
+      state.activeProject = Number(m[1]);
+    } else {
+      state.activeProject = null;
+      state.activeTab = !raw ? HOME
+        : raw === "overview" ? OVERVIEW
+        : state.themes.some(([name]) => name === raw) ? raw : HOME;
+      state.filters = emptyFilters();
+    }
+    renderTabs();
+    render();
   }
 
   // --- Render: cards only (filter application) ----------------------------
@@ -274,6 +344,7 @@
     if (!bar) return;
     const pills = FACETS.filter((f) => state.filters[f.key])
       .map((f) => ({ key: f.key, label: f.label, value: state.filters[f.key] }));
+    if (state.filters.tag) pills.push({ key: "tag", label: "Tag", value: state.filters.tag });
     if (state.filters.q) pills.push({ key: "q", label: "Search", value: state.filters.q });
     if (!pills.length) { bar.hidden = true; bar.innerHTML = ""; return; }
     bar.hidden = false;
@@ -288,7 +359,7 @@
   }
 
   function removeFilter(key) {
-    if (key === "__all__") state.filters = { innovation: "", recordType: "", stage: "", domain: "", institute: "", collab: "", q: "" };
+    if (key === "__all__") state.filters = emptyFilters();
     else state.filters[key] = "";
     const si = $("searchInput");
     if (si) si.value = state.filters.q;
@@ -301,7 +372,8 @@
   function render() {
     destroyCharts();
     state.rebuildCharts = null;
-    if (state.activeTab === HOME) renderHome();
+    if (state.activeProject != null) renderProject();
+    else if (state.activeTab === HOME) renderHome();
     else if (state.activeTab === OVERVIEW) renderOverview();
     else renderThemeView();
   }
@@ -406,7 +478,7 @@
       </section>
       ${kpiHtml(kpis)}
       <section class="charts">
-        <figure class="chart-card chart-card--wide"><figcaption>Research domain <span class="chart-hint">Click to filter</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cDomain"></canvas></div></figure>
+        <figure class="chart-card chart-card--wide"><figcaption>Model system <span class="chart-hint">Click to filter</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cModel"></canvas></div></figure>
         <figure class="chart-card"><figcaption>Innovation theme <span class="chart-hint">Click to filter</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cInnovation"></canvas></div></figure>
         <figure class="chart-card"><figcaption>Research stage <span class="chart-hint">Click to filter</span></figcaption><div class="chart-wrap chart-wrap--tall"><canvas id="cStage"></canvas></div></figure>
       </section>
@@ -431,12 +503,12 @@
     // value on one chart instantly reshapes the others — and the cards.
     function buildCharts() {
       destroyCharts();
-      state.charts.push(DashCharts.makeBar($("cDomain"), countBy(applyFacets(subset, "domain"), "domain", true), setFacet("domain"),
-        { horizontal: true, topN: 10, active: state.filters.domain }));
+      state.charts.push(DashCharts.makeBar($("cModel"), countBy(applyFacets(subset, "modelNorm"), "modelNorm", true), setFacet("modelNorm"),
+        { horizontal: true, active: state.filters.modelNorm }));
       state.charts.push(DashCharts.makeDoughnut($("cInnovation"), countBy(applyFacets(subset, "innovation"), "innovation", true), setFacet("innovation"),
         { active: state.filters.innovation }));
-      state.charts.push(DashCharts.makeBar($("cStage"), countBy(applyFacets(subset, "stage"), "stage", false), setFacet("stage"),
-        { horizontal: true, topN: 8, active: state.filters.stage }));
+      state.charts.push(DashCharts.makeBar($("cStage"), countBy(applyFacets(subset, "stageNorm"), "stageNorm", false), setFacet("stageNorm"),
+        { horizontal: true, active: state.filters.stageNorm }));
     }
     const setFacet = (key) => (value) => {
       state.filters[key] = state.filters[key] === value ? "" : value;
@@ -459,6 +531,14 @@
       applyFilters();
     });
 
+    // Delegated: open a project's full page, or toggle a tag filter, from any card.
+    $("projectGrid").addEventListener("click", (e) => {
+      const opener = e.target.closest("[data-open]");
+      if (opener) { openProject(Number(opener.dataset.open)); return; }
+      const tagBtn = e.target.closest(".tag[data-tag]");
+      if (tagBtn) applyTagFilter(tagBtn.dataset.tag);
+    });
+
     applyFilters();
   }
 
@@ -466,6 +546,78 @@
     view().querySelectorAll(".facet").forEach((sel) => {
       sel.value = state.filters[sel.dataset.key] || "";
     });
+  }
+
+  // Open a theme and pre-apply a tag filter (used from a project's tags).
+  function openThemeWithTag(theme, tag) {
+    selectTab(theme);
+    state.filters.tag = tag;
+    syncFacetControls();
+    if (state.rebuildCharts) state.rebuildCharts();
+    applyFilters();
+  }
+
+  // --- Render: single project (every field in the data file) --------------
+  function renderProject() {
+    const p = state.projects.find((x) => x.id === state.activeProject);
+    const backLabel = state.returnTab === OVERVIEW ? "Overview" : state.returnTab;
+    if (!p) {
+      view().innerHTML = `<section class="project-detail">
+        <button class="project-detail__back" id="pBack">← Back</button>
+        <p class="empty">Project not found.</p></section>`;
+      $("pBack").addEventListener("click", () => selectTab(state.returnTab));
+      return;
+    }
+    const themesArr = splitMulti(p.theme);
+    const primaryTheme = themesArr[0] || OVERVIEW;
+    const chips = (arr) => arr.map((v) => `<span class="pchip">${esc(v)}</span>`).join("");
+    const themeChips = themesArr.map((t) =>
+      `<button type="button" class="pchip pchip--theme" data-theme="${esc(t)}"><span class="pchip__dot" style="background:${themeColor(t)}"></span>${esc(t)}</button>`).join("");
+    const tagChips = p.tags.length
+      ? p.tags.map((t) => `<button type="button" class="tag" data-tag="${esc(t)}">${esc(t)}</button>`).join("")
+      : "";
+    const rows = [
+      ["Main institute", chips(splitMulti(p.institute))],
+      ["Involved department / research group", p.department ? esc(p.department) : ""],
+      ["Collaborating departments / partners", p.collaborators ? esc(p.collaborators) : ""],
+      ["Utrecht Brain innovation theme", chips(splitMulti(p.innovation))],
+      ["Research domain", chips(splitMulti(p.domain))],
+      ["Disease / condition / application", chips(splitMulti(p.disease))],
+      ["Methods & technologies", chips(splitMulti(p.methods))],
+      ["Population / model system", chips(splitMulti(p.population))],
+      ["Research stage", p.stage ? esc(p.stage) : ""],
+      ["Record type", p.recordType ? esc(p.recordType) : ""],
+      ["Main contact", p.contact ? esc(p.contact) : ""],
+      ["Website", p.website ? `<a href="${esc(p.website)}" target="_blank" rel="noopener">${esc(p.website)} ↗</a>` : ""],
+    ].filter(([, v]) => v);
+
+    view().innerHTML = `
+      <section class="project-detail">
+        <button class="project-detail__back" id="pBack">← Back to ${esc(backLabel)}</button>
+        <header class="project-detail__head">
+          <span class="project-detail__eyebrow">Research project</span>
+          <h2>${esc(p.title)}</h2>
+          <div class="project-detail__themes">${themeChips}</div>
+          <div class="card__badges project-detail__badges">
+            ${p.recordType ? `<span class="badge badge--type">${esc(p.recordType)}</span>` : ""}
+            ${p.stage ? `<span class="badge badge--stage">${esc(p.stage)}</span>` : ""}
+            ${p.collab === "Collaboration"
+              ? `<span class="badge badge--collab"><span class="badge__dot" style="background:var(--green)"></span>Collaboration</span>`
+              : `<span class="badge badge--solo"><span class="badge__dot" style="background:#b9b9b9"></span>No Collaboration</span>`}
+          </div>
+        </header>
+        ${p.description ? `<p class="project-detail__desc">${esc(p.description)}</p>` : ""}
+        <dl class="project-detail__grid">
+          ${rows.map(([k, v]) => `<div class="pdl"><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}
+        </dl>
+        ${tagChips ? `<div class="project-detail__tags"><span class="project-detail__tags-label">Tags / subthemes</span><div class="card__tags">${tagChips}</div></div>` : ""}
+      </section>`;
+
+    $("pBack").addEventListener("click", () => selectTab(state.returnTab));
+    view().querySelectorAll(".pchip--theme").forEach((b) =>
+      b.addEventListener("click", () => selectTab(b.dataset.theme)));
+    view().querySelectorAll(".project-detail__tags .tag").forEach((b) =>
+      b.addEventListener("click", () => openThemeWithTag(primaryTheme, b.dataset.tag)));
   }
 
   // --- Boot ---------------------------------------------------------------
@@ -478,28 +630,16 @@
       status.textContent = `${state.projects.length} projects loaded`;
       status.dataset.state = "ready";
       $("dataMeta").textContent = `${state.projects.length} projects · ${state.themes.length} themes`;
-      state.activeTab = tabFromHash();
-      renderTabs();
-      render();
+      applyRoute();
       const homeLink = $("homeLink");
       if (homeLink) homeLink.addEventListener("click", (event) => {
         event.preventDefault();
         selectTab(HOME);
       });
-      window.addEventListener("hashchange", () => {
-        const tab = tabFromHash();
-        if (tab !== state.activeTab) selectTab(tab);
-      });
-      window.addEventListener("popstate", () => {
-        const tab = tabFromHash();
-        if (tab !== state.activeTab) {
-          state.activeTab = tab;
-          state.filters = { innovation: "", recordType: "", stage: "", domain: "", institute: "", collab: "", q: "" };
-          renderTabs();
-          render();
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
-      });
+      // Browser back/forward and manual hash edits re-sync the view from the URL.
+      const onNav = () => { applyRoute(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      window.addEventListener("hashchange", onNav);
+      window.addEventListener("popstate", onNav);
     } catch (err) {
       console.error(err);
       status.textContent = "Failed to load data";
