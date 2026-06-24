@@ -31,10 +31,11 @@
     return labels.map((l, i) => (l === active ? base[i] : base[i] + "33"));
   }
 
-  // Split long category labels across as many lines as needed. Keeping every
-  // line avoids hiding information behind an ellipsis.
+  // Wrap a long category label onto at most `maxLines` lines, ellipsising the
+  // overflow. The full label always remains available in the tooltip, so we keep
+  // axis ticks compact and aligned instead of letting them sprawl and collide.
   // Breaks on spaces and after slashes, and hard-breaks any over-long token.
-  function wrapLabel(str, max) {
+  function wrapLabel(str, max, maxLines = 2) {
     const tokens = String(str).replace(/\//g, "/ ").split(/\s+/).filter(Boolean);
     const lines = [];
     let cur = "";
@@ -48,7 +49,11 @@
       else cur = (cur + " " + t).trim();
     }
     if (cur) lines.push(cur);
-    return lines;
+    if (lines.length <= maxLines) return lines;
+    const kept = lines.slice(0, maxLines);
+    const last = kept[maxLines - 1];
+    kept[maxLines - 1] = (last.length > max - 1 ? last.slice(0, max - 1).trimEnd() : last) + "…";
+    return kept;
   }
 
   // Collapse a long tail of entries into a single non-clickable "Other" bar.

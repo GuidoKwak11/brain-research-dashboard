@@ -306,7 +306,7 @@ body {
   white-space: nowrap;
 }
 .chart-wrap { position: relative; height: 240px; }
-.chart-wrap--tall { height: 360px; }
+.chart-wrap--tall { height: 440px; }
 
 /* ---------- Theme tiles (overview) ---------- */
 .theme-grid {

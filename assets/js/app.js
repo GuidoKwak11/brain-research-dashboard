@@ -432,11 +432,11 @@
     function buildCharts() {
       destroyCharts();
       state.charts.push(DashCharts.makeBar($("cDomain"), countBy(applyFacets(subset, "domain"), "domain", true), setFacet("domain"),
-        { horizontal: true, topN: 12, active: state.filters.domain }));
+        { horizontal: true, topN: 10, active: state.filters.domain }));
       state.charts.push(DashCharts.makeDoughnut($("cInnovation"), countBy(applyFacets(subset, "innovation"), "innovation", true), setFacet("innovation"),
         { active: state.filters.innovation }));
       state.charts.push(DashCharts.makeBar($("cStage"), countBy(applyFacets(subset, "stage"), "stage", false), setFacet("stage"),
-        { horizontal: true, active: state.filters.stage }));
+        { horizontal: true, topN: 8, active: state.filters.stage }));
     }
     const setFacet = (key) => (value) => {
       state.filters[key] = state.filters[key] === value ? "" : value;
