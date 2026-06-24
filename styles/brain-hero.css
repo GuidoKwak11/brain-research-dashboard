@@ -187,8 +187,8 @@
 }
 .brain-hero__hotspot.side-right  { flex-direction: row; }
 .brain-hero__hotspot.side-left   { flex-direction: row-reverse; }
-.brain-hero__hotspot.side-top    { flex-direction: column; }
-.brain-hero__hotspot.side-bottom { flex-direction: column-reverse; }
+.brain-hero__hotspot.side-top    { flex-direction: column-reverse; }
+.brain-hero__hotspot.side-bottom { flex-direction: column; }
 /* Push the label outward so it sits clear of the node. */
 .brain-hero__hotspot.side-right  { transform: translate(0, -50%); }
 .brain-hero__hotspot.side-left   { transform: translate(-100%, -50%); }
