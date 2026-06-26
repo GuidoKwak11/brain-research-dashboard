@@ -213,6 +213,17 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  // Capitalise the first letter for display only, leaving acronyms / mixed-case
+  // tokens (iPSC, mRNA, AI, MRI, ALS) untouched. Underlying values stay unchanged
+  // so filtering and matching keep working.
+  function capFirst(s) {
+    s = String(s == null ? "" : s);
+    if (!s) return s;
+    const firstWord = s.split(/\s/, 1)[0];
+    if (/[A-Z]/.test(firstWord)) return s;
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
   // Split a department/collaborator field into clean items for a bulleted list.
   // Involved department uses " / " between units; collaborators use ";" (a "/" there
   // sits inside a single partner name, so we keep it).
@@ -224,7 +235,7 @@
   function bulletList(text, mode) {
     const items = splitListItems(text, mode);
     if (!items.length) return "";
-    return `<ul class="bullets">${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`;
+    return `<ul class="bullets">${items.map((i) => `<li>${esc(capFirst(i))}</li>`).join("")}</ul>`;
   }
 
   // Stable UU-palette colour per theme (consistent across tiles + badges).
@@ -242,7 +253,7 @@
 
   function tagChipsHtml(tags, activeTag) {
     return tags.map((t) =>
-      `<button type="button" class="tag${t === activeTag ? " is-active" : ""}" data-tag="${esc(t)}" aria-pressed="${t === activeTag}">${esc(t)}</button>`).join("");
+      `<button type="button" class="tag${t === activeTag ? " is-active" : ""}" data-tag="${esc(t)}" aria-pressed="${t === activeTag}">${esc(capFirst(t))}</button>`).join("");
   }
 
   function cardHtml(p) {
@@ -375,9 +386,12 @@
     bar.hidden = false;
     bar.innerHTML =
       `<span class="active-filters__label">Active filters</span>` +
-      pills.map((p) => `<button class="pill" data-key="${esc(p.key)}" aria-label="Remove filter ${esc(p.label)}: ${esc(p.value)}">
-        <span class="pill__k">${esc(p.label)}:</span> ${esc(p.value)} <span class="pill__x" aria-hidden="true">×</span>
-      </button>`).join("") +
+      pills.map((p) => {
+        const dv = p.key === "q" ? p.value : capFirst(p.value);
+        return `<button class="pill" data-key="${esc(p.key)}" aria-label="Remove filter ${esc(p.label)}: ${esc(dv)}">
+        <span class="pill__k">${esc(p.label)}:</span> ${esc(dv)} <span class="pill__x" aria-hidden="true">×</span>
+      </button>`;
+      }).join("") +
       `<button class="pill pill--clear" data-key="__all__">Clear all</button>`;
     bar.querySelectorAll(".pill").forEach((btn) =>
       btn.addEventListener("click", () => removeFilter(btn.dataset.key)));
@@ -491,7 +505,7 @@
       const opts = countBy(subset, f.key, f.multi);
       return `<select class="facet" data-key="${f.key}" aria-label="${esc(f.label)}">
         <option value="">${esc(f.label)} — all</option>
-        ${opts.map(([v, n]) => `<option value="${esc(v)}">${esc(v)} (${n})</option>`).join("")}
+        ${opts.map(([v, n]) => `<option value="${esc(v)}">${esc(capFirst(v))} (${n})</option>`).join("")}
       </select>`;
     }).join("");
 
@@ -599,11 +613,11 @@
     }
     const themesArr = splitMulti(p.theme);
     const primaryTheme = themesArr[0] || OVERVIEW;
-    const chips = (arr) => arr.map((v) => `<span class="pchip">${esc(v)}</span>`).join("");
+    const chips = (arr) => arr.map((v) => `<span class="pchip">${esc(capFirst(v))}</span>`).join("");
     const themeChips = themesArr.map((t) =>
       `<button type="button" class="pchip pchip--theme" data-theme="${esc(t)}"><span class="pchip__dot" style="background:${themeColor(t)}"></span>${esc(t)}</button>`).join("");
     const tagChips = p.tags.length
-      ? p.tags.map((t) => `<button type="button" class="tag" data-tag="${esc(t)}">${esc(t)}</button>`).join("")
+      ? p.tags.map((t) => `<button type="button" class="tag" data-tag="${esc(t)}">${esc(capFirst(t))}</button>`).join("")
       : "";
     const rows = [
       ["Institution (broad)", chips(splitMulti(p.instituteFilter))],
