@@ -524,8 +524,23 @@ body {
 .badge--collab { background: #eaf7f4; border-color: #bfe6df; }
 .badge--solo { background: #f4f4f4; border-color: #e2e2e2; color: #595959; }
 .badge--type { background: #fff6d9; border-color: #f4e3a6; color: #6b5300; text-transform: capitalize; }
-.card__detail { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--muted); }
+.card__detail { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--muted); }
 .card__detail-k { font-weight: 700; color: #333333; }
+.card__detail-row--list { display: flex; flex-direction: column; gap: 3px; }
+/* Bulleted list for multi-item fields (departments, collaborators). */
+.bullets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.bullets li { position: relative; padding-left: 15px; line-height: 1.45; }
+.bullets li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #e0b400;
+}
+.pdl dd .bullets { width: 100%; }
 .card__title { margin: 0; }
 .card__open {
   font-family: var(--font-head); font-size: 1.05rem; font-weight: 700;

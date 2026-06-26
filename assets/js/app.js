@@ -213,6 +213,20 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  // Split a department/collaborator field into clean items for a bulleted list.
+  // Involved department uses " / " between units; collaborators use ";" (a "/" there
+  // sits inside a single partner name, so we keep it).
+  function splitListItems(text, mode) {
+    if (!text) return [];
+    const sep = mode === "collab" ? /\s*;\s*/ : /\s*\/\s*|\s*;\s*/;
+    return text.split(sep).map((s) => s.replace(/[.;,\s]+$/, "").trim()).filter(Boolean);
+  }
+  function bulletList(text, mode) {
+    const items = splitListItems(text, mode);
+    if (!items.length) return "";
+    return `<ul class="bullets">${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`;
+  }
+
   // Stable UU-palette colour per theme (consistent across tiles + badges).
   function themeColor(name) {
     const palette = (window.DashCharts && DashCharts.PALETTE) || ["#000000"];
@@ -250,8 +264,8 @@
     const broadInstitute = splitMulti(p.instituteFilter).join(", ");
     const detail = [
       broadInstitute ? `<div class="card__detail-row"><span class="card__detail-k">Main institute:</span> ${esc(broadInstitute)}</div>` : "",
-      p.department ? `<div class="card__detail-row"><span class="card__detail-k">Involved department:</span> ${esc(p.department)}</div>` : "",
-      hasCollab ? `<div class="card__detail-row"><span class="card__detail-k">Collaborating with:</span> ${esc(p.collaborators)}</div>` : "",
+      p.department ? `<div class="card__detail-row card__detail-row--list"><span class="card__detail-k">Involved department</span>${bulletList(p.department, "dept")}</div>` : "",
+      hasCollab ? `<div class="card__detail-row card__detail-row--list"><span class="card__detail-k">Collaborating with</span>${bulletList(p.collaborators, "collab")}</div>` : "",
     ].join("");
     return `<article class="card card--link" data-open="${p.id}">
       <div class="card__badges">${badges}</div>
@@ -594,8 +608,8 @@
     const rows = [
       ["Institution (broad)", chips(splitMulti(p.instituteFilter))],
       ["Main institute", chips(splitMulti(p.institute))],
-      ["Involved department / research group", p.department ? esc(p.department) : ""],
-      ["Collaborating departments / partners", p.collaborators ? esc(p.collaborators) : ""],
+      ["Involved department / research group", bulletList(p.department, "dept")],
+      ["Collaborating departments / partners", bulletList(p.collaborators, "collab")],
       ["Utrecht Brain innovation theme", chips(splitMulti(p.innovation))],
       ["Research domain", chips(splitMulti(p.domain))],
       ["Disease / condition / application", chips(splitMulti(p.disease))],
