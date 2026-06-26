@@ -35,6 +35,7 @@
   // Model system + research stage use the normalised buckets so they stay clean.
   const FACETS = [
     { key: "innovation", label: "Innovation theme", multi: true },
+    { key: "disease", label: "Disease / condition", multi: true },
     { key: "modelNorm", label: "Model system", multi: true },
     { key: "stageNorm", label: "Research stage", multi: false },
     { key: "recordType", label: "Record type", multi: false },
@@ -526,6 +527,7 @@
     view().querySelectorAll(".facet").forEach((sel) =>
       sel.addEventListener("change", () => {
         state.filters[sel.dataset.key] = sel.value;
+        sel.classList.toggle("facet--on", !!sel.value);
         buildCharts();
         applyFilters();
       }));
@@ -548,7 +550,9 @@
 
   function syncFacetControls() {
     view().querySelectorAll(".facet").forEach((sel) => {
-      sel.value = state.filters[sel.dataset.key] || "";
+      const v = state.filters[sel.dataset.key] || "";
+      sel.value = v;
+      sel.classList.toggle("facet--on", !!v);
     });
   }
 
