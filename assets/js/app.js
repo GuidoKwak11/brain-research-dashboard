@@ -16,6 +16,7 @@
     title: "Research / project title",
     theme: "General brain research theme",
     institute: "Main institute",
+    instituteFilter: "Main institution filter",
     department: "Involved internal department / research group",
     collaborators: "Collaborating departments / partners",
     website: "Website",
@@ -39,7 +40,7 @@
     { key: "modelNorm", label: "Model system", multi: true },
     { key: "stageNorm", label: "Research stage", multi: false },
     { key: "recordType", label: "Record type", multi: false },
-    { key: "institute", label: "Institute", multi: false },
+    { key: "instituteFilter", label: "Institute", multi: true },
     { key: "collab", label: "Collaboration", multi: false },
   ];
 
@@ -130,15 +131,20 @@
     return rows.slice(1)
       .map((r) => {
         const collabRaw = cell(r, "collaborators");
-        const hasCollab = collabRaw !== "" && !/^(no|none|n\/a|-|geen)$/i.test(collabRaw);
+        // No external partners when the cell is a bare "no" OR the revised phrasing
+        // "No external collaborators publicly specified…".
+        const hasCollab = collabRaw !== ""
+          && !/^(no|none|n\/a|-|geen)$/i.test(collabRaw)
+          && !/^no external collaborators/i.test(collabRaw);
         const stage = cell(r, "stage");
         const population = cell(r, "population");
         return {
           title: cell(r, "title"),
           theme: cell(r, "theme"),
           institute: cell(r, "institute"),
+          instituteFilter: cell(r, "instituteFilter"),
           department: cell(r, "department"),
-          collaborators: hasCollab ? collabRaw : "",
+          collaborators: collabRaw,
           collab: hasCollab ? "Collaboration" : "No Collaboration",
           website: cell(r, "website"),
           innovation: cell(r, "innovation"),
@@ -195,7 +201,7 @@
       }
       if (tag && !p.tags.includes(tag)) return false;
       if (needle) {
-        const hay = [p.title, p.description, p.tags.join(" "), p.methods, p.disease, p.domain]
+        const hay = [p.title, p.description, p.tags.join(" "), p.methods, p.disease, p.domain, p.institute, p.department]
           .join(" ").toLowerCase();
         if (!hay.includes(needle)) return false;
       }
@@ -424,7 +430,7 @@
       { value: p.length, label: "Research projects" },
       { value: state.themes.length, label: "Dashboard themes" },
       { value: new Set(p.flatMap((x) => splitMulti(x.domain))).size, label: "Research domains" },
-      { value: new Set(p.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
+      { value: new Set(p.flatMap((x) => splitMulti(x.instituteFilter))).size, label: "Institutes" },
       { value: p.filter((x) => x.collab === "Collaboration").length, label: "Collaborations" },
     ];
     view().innerHTML = `
@@ -463,7 +469,7 @@
       { value: subset.length, label: "Projects in theme" },
       { value: new Set(subset.flatMap((x) => splitMulti(x.domain))).size, label: "Research domains" },
       { value: new Set(subset.map((x) => x.stage).filter(Boolean)).size, label: "Research stages" },
-      { value: new Set(subset.map((x) => x.institute).filter(Boolean)).size, label: "Institutes" },
+      { value: new Set(subset.flatMap((x) => splitMulti(x.instituteFilter))).size, label: "Institutes" },
       { value: subset.filter((x) => x.collab === "Collaboration").length, label: "Collaborations" },
     ];
     const facetControls = FACETS.map((f) => {
@@ -585,6 +591,7 @@
       ? p.tags.map((t) => `<button type="button" class="tag" data-tag="${esc(t)}">${esc(t)}</button>`).join("")
       : "";
     const rows = [
+      ["Institution (broad)", chips(splitMulti(p.instituteFilter))],
       ["Main institute", chips(splitMulti(p.institute))],
       ["Involved department / research group", p.department ? esc(p.department) : ""],
       ["Collaborating departments / partners", p.collaborators ? esc(p.collaborators) : ""],
