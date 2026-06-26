@@ -247,8 +247,9 @@
       p.stage ? `<span class="badge badge--stage">${esc(p.stage)}</span>` : "",
       collabBadge,
     ].join("");
+    const broadInstitute = splitMulti(p.instituteFilter).join(", ");
     const detail = [
-      p.institute ? `<div class="card__detail-row"><span class="card__detail-k">Main institute:</span> ${esc(p.institute)}</div>` : "",
+      broadInstitute ? `<div class="card__detail-row"><span class="card__detail-k">Main institute:</span> ${esc(broadInstitute)}</div>` : "",
       p.department ? `<div class="card__detail-row"><span class="card__detail-k">Involved department:</span> ${esc(p.department)}</div>` : "",
       hasCollab ? `<div class="card__detail-row"><span class="card__detail-k">Collaborating with:</span> ${esc(p.collaborators)}</div>` : "",
     ].join("");
