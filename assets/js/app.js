@@ -224,6 +224,25 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
+  // Title-case institution / department / partner names: capitalise each word but
+  // keep minor words (of, and, the, within…) lower, and leave acronyms / mixed-case
+  // tokens (UMC, iPSC, UU, MRI, ALS, Health~Holland) exactly as written.
+  const TITLE_MINOR = new Set(["a", "an", "and", "as", "at", "but", "by", "de", "den", "der", "en", "for", "het", "in", "nor", "of", "on", "or", "per", "the", "to", "van", "via", "vs", "with", "within"]);
+  function titleCase(s) {
+    s = String(s == null ? "" : s);
+    if (!s) return s;
+    let wordIndex = 0;
+    return s.split(/(\s+|\/)/).map((tok) => {
+      if (tok === "" || /^(\s+|\/)$/.test(tok)) return tok;
+      const isFirst = wordIndex === 0;
+      wordIndex++;
+      if (/[A-Z]/.test(tok.slice(1))) return tok;            // mixed-case acronym/proper token
+      const lower = tok.toLowerCase();
+      if (!isFirst && TITLE_MINOR.has(lower)) return lower;  // minor word stays lower
+      return tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase();
+    }).join("");
+  }
+
   // Split a department/collaborator field into clean items for a bulleted list.
   // Involved department uses " / " between units; collaborators use ";" (a "/" there
   // sits inside a single partner name, so we keep it).
@@ -235,7 +254,7 @@
   function bulletList(text, mode) {
     const items = splitListItems(text, mode);
     if (!items.length) return "";
-    return `<ul class="bullets">${items.map((i) => `<li>${esc(capFirst(i))}</li>`).join("")}</ul>`;
+    return `<ul class="bullets">${items.map((i) => `<li>${esc(titleCase(i))}</li>`).join("")}</ul>`;
   }
 
   // Stable UU-palette colour per theme (consistent across tiles + badges).
@@ -629,9 +648,9 @@
       ["Disease / condition / application", chips(splitMulti(p.disease))],
       ["Methods & technologies", chips(splitMulti(p.methods))],
       ["Population / model system", chips(splitMulti(p.population))],
-      ["Research stage", p.stage ? esc(p.stage) : ""],
-      ["Record type", p.recordType ? esc(p.recordType) : ""],
-      ["Main contact", p.contact ? esc(p.contact) : ""],
+      ["Research stage", p.stage ? esc(capFirst(p.stage)) : ""],
+      ["Record type", p.recordType ? esc(capFirst(p.recordType)) : ""],
+      ["Main contact", p.contact ? esc(capFirst(p.contact)) : ""],
       ["Website", p.website ? `<a href="${esc(p.website)}" target="_blank" rel="noopener">${esc(p.website)} ↗</a>` : ""],
     ].filter(([, v]) => v);
 
